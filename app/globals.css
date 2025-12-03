@@ -26,3 +26,42 @@ body {
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
 }
+
+/* Custom utilities for calendar */
+@layer utilities {
+  .bg-blue-25 {
+    background-color: #eff6ff;
+  }
+
+  /* Smooth scrolling for calendar */
+  .calendar-scroll {
+    scroll-behavior: smooth;
+  }
+
+  /* Prevent text selection in calendar grid */
+  .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Touch target optimization for mobile */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Calendar specific styles */
+.calendar-grid-row:hover {
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* Improve mobile tap feedback */
+@media (hover: none) and (pointer: coarse) {
+  button:active,
+  .cursor-pointer:active {
+    transform: scale(0.98);
+  }
+}
