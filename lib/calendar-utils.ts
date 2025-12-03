@@ -6,15 +6,15 @@ export interface TimeSlot {
   label: string
 }
 
-export const DAYS_OF_WEEK_RU = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+export const DAYS_OF_WEEK_RU = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
 export const DAYS_OF_WEEK_FULL_RU = [
+  'Воскресенье',
   'Понедельник',
   'Вторник',
   'Среда',
   'Четверг',
   'Пятница',
   'Суббота',
-  'Воскресенье',
 ]
 
 export const WORKING_HOURS = {
@@ -25,23 +25,23 @@ export const WORKING_HOURS = {
 export const SLOT_DURATION_MINUTES = 30
 
 /**
- * Get Monday of the week for a given date
+ * Get Sunday of the week for a given date (Israel timezone - week starts Sunday)
  */
-export function getMonday(date: Date): Date {
+export function getSunday(date: Date): Date {
   const d = new Date(date)
   const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1) // Adjust when day is Sunday
+  const diff = d.getDate() - day // Sunday is 0, so subtract day number to get to Sunday
   return new Date(d.setDate(diff))
 }
 
 /**
- * Get array of dates for the week starting from Monday
+ * Get array of dates for the week starting from Sunday
  */
-export function getWeekDates(monday: Date): Date[] {
+export function getWeekDates(sunday: Date): Date[] {
   const dates: Date[] = []
   for (let i = 0; i < 7; i++) {
-    const date = new Date(monday)
-    date.setDate(monday.getDate() + i)
+    const date = new Date(sunday)
+    date.setDate(sunday.getDate() + i)
     dates.push(date)
   }
   return dates
@@ -98,10 +98,10 @@ export function isToday(date: Date): boolean {
 /**
  * Check if a date is in the current week
  */
-export function isCurrentWeek(monday: Date): boolean {
+export function isCurrentWeek(sunday: Date): boolean {
   const today = new Date()
-  const currentMonday = getMonday(today)
-  return isSameDay(monday, currentMonday)
+  const currentSunday = getSunday(today)
+  return isSameDay(sunday, currentSunday)
 }
 
 /**
@@ -127,8 +127,8 @@ export function generateTimeSlots(): TimeSlot[] {
 /**
  * Navigate to previous week
  */
-export function getPreviousWeek(currentMonday: Date): Date {
-  const newDate = new Date(currentMonday)
+export function getPreviousWeek(currentSunday: Date): Date {
+  const newDate = new Date(currentSunday)
   newDate.setDate(newDate.getDate() - 7)
   return newDate
 }
@@ -136,8 +136,8 @@ export function getPreviousWeek(currentMonday: Date): Date {
 /**
  * Navigate to next week
  */
-export function getNextWeek(currentMonday: Date): Date {
-  const newDate = new Date(currentMonday)
+export function getNextWeek(currentSunday: Date): Date {
+  const newDate = new Date(currentSunday)
   newDate.setDate(newDate.getDate() + 7)
   return newDate
 }

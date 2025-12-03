@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import {
-  getMonday,
+  getSunday,
   getWeekDates,
   formatDate,
   formatDateLong,
@@ -15,24 +15,24 @@ import {
 } from '@/lib/calendar-utils'
 
 export default function CalendarPage() {
-  // State for current week (Monday)
-  const [currentMonday, setCurrentMonday] = useState(() => getMonday(new Date()))
+  // State for current week (Sunday - Israel timezone)
+  const [currentSunday, setCurrentSunday] = useState(() => getSunday(new Date()))
 
   // Get dates for the current week
-  const weekDates = getWeekDates(currentMonday)
+  const weekDates = getWeekDates(currentSunday)
   const timeSlots = generateTimeSlots()
 
   // Navigation handlers
   const handlePreviousWeek = () => {
-    setCurrentMonday(getPreviousWeek(currentMonday))
+    setCurrentSunday(getPreviousWeek(currentSunday))
   }
 
   const handleNextWeek = () => {
-    setCurrentMonday(getNextWeek(currentMonday))
+    setCurrentSunday(getNextWeek(currentSunday))
   }
 
   const handleToday = () => {
-    setCurrentMonday(getMonday(new Date()))
+    setCurrentSunday(getSunday(new Date()))
   }
 
   return (
@@ -63,9 +63,9 @@ export default function CalendarPage() {
             {/* Today Button */}
             <button
               onClick={handleToday}
-              disabled={isCurrentWeek(currentMonday)}
+              disabled={isCurrentWeek(currentSunday)}
               className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isCurrentWeek(currentMonday)
+                isCurrentWeek(currentSunday)
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
               }`}
