@@ -87,3 +87,29 @@ export interface UpdateBookingData {
   Date?: string
   Token_Used?: boolean
 }
+
+// Booking data as returned from Airtable with lookup fields
+export interface BookingFromAirtable {
+  id: string
+  fields: {
+    Date?: string // ISO datetime
+    'Name (from Client)'?: string[] // Array with client names from lookup
+    'Name (from Procedures)'?: string[] // Array with procedure names from lookup
+    Total_Duration?: string // "1:30" format
+    Total_Price?: number
+    Phone_Number?: string[] // Lookup field from Client table
+    Booking_Number_New?: number
+  }
+}
+
+// Parsed booking data for display
+export interface BookingDisplay {
+  id: string
+  clientName: string
+  clientPhone: string
+  date: string // ISO datetime
+  procedures: string[]
+  totalDuration: string
+  totalPrice: number
+  bookingNumber: number
+}

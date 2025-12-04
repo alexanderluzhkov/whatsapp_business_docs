@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   getSunday,
   getWeekDates,
@@ -13,6 +13,10 @@ import {
   getNextWeek,
   DAYS_OF_WEEK_RU,
 } from '@/lib/calendar-utils'
+import { getBookings } from '@/lib/airtable'
+import type { BookingFromAirtable, BookingDisplay } from '@/types/airtable'
+import BookingCard from '@/components/BookingCard'
+import BookingDetailsModal from '@/components/BookingDetailsModal'
 
 export default function CalendarPage() {
   // State for current week (Sunday - Israel timezone)
@@ -21,6 +25,80 @@ export default function CalendarPage() {
   // Get dates for the current week
   const weekDates = getWeekDates(currentSunday)
   const timeSlots = generateTimeSlots()
+
+  // Booking state
+  const [bookings, setBookings] = useState<BookingDisplay[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Modal state
+  const [selectedBooking, setSelectedBooking] = useState<BookingDisplay | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
+  // Fetch bookings for current week
+  useEffect(() => {
+    const fetchBookings = async () => {
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        // Calculate week range
+        const weekStart = new Date(currentSunday)
+        weekStart.setHours(0, 0, 0, 0)
+
+        const weekEnd = new Date(currentSunday)
+        weekEnd.setDate(weekEnd.getDate() + 7)
+        weekEnd.setHours(0, 0, 0, 0)
+
+        // Fetch all bookings (we'll filter on frontend for now)
+        const allBookings = await getBookings()
+
+        // Parse and filter bookings
+        const parsedBookings: BookingDisplay[] = allBookings
+          .map((booking: any) => {
+            const fields = booking.fields
+
+            // Skip if no client name
+            if (!fields['Name (from Client)'] || fields['Name (from Client)'].length === 0) {
+              return null
+            }
+
+            // Skip if no date
+            if (!fields.Date) {
+              return null
+            }
+
+            const bookingDate = new Date(fields.Date)
+
+            // Filter to current week only
+            if (bookingDate < weekStart || bookingDate >= weekEnd) {
+              return null
+            }
+
+            return {
+              id: booking.id,
+              clientName: fields['Name (from Client)'][0],
+              clientPhone: fields['Phone_Number']?.[0] || 'Не указан',
+              date: fields.Date,
+              procedures: fields['Name (from Procedures)'] || [],
+              totalDuration: fields.Total_Duration || '0:00',
+              totalPrice: fields.Total_Price || 0,
+              bookingNumber: fields.Booking_Number_New || 0,
+            }
+          })
+          .filter((booking): booking is BookingDisplay => booking !== null)
+
+        setBookings(parsedBookings)
+      } catch (err) {
+        console.error('Error fetching bookings:', err)
+        setError('Не удалось загрузить записи')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchBookings()
+  }, [currentSunday])
 
   // Navigation handlers
   const handlePreviousWeek = () => {
@@ -33,6 +111,32 @@ export default function CalendarPage() {
 
   const handleToday = () => {
     setCurrentSunday(getSunday(new Date()))
+  }
+
+  // Find booking for a specific time slot
+  const findBookingForSlot = (date: Date, hour: number, minute: number): BookingDisplay | undefined => {
+    return bookings.find((booking) => {
+      const bookingDate = new Date(booking.date)
+      return (
+        bookingDate.getDate() === date.getDate() &&
+        bookingDate.getMonth() === date.getMonth() &&
+        bookingDate.getFullYear() === date.getFullYear() &&
+        bookingDate.getHours() === hour &&
+        bookingDate.getMinutes() === minute
+      )
+    })
+  }
+
+  // Handle booking click
+  const handleBookingClick = (booking: BookingDisplay) => {
+    setSelectedBooking(booking)
+    setIsModalOpen(true)
+  }
+
+  // Close modal
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedBooking(null)
   }
 
   return (
@@ -83,6 +187,21 @@ export default function CalendarPage() {
 
       {/* Calendar Grid */}
       <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Loading State */}
+        {isLoading && (
+          <div className="text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div>
+            <p className="mt-2 text-gray-600">Загрузка записей...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <p className="text-red-800">{error}</p>
+          </div>
+        )}
+
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           {/* Desktop View */}
           <div className="hidden md:block overflow-x-auto">
@@ -130,14 +249,23 @@ export default function CalendarPage() {
                       {/* Time Slots for Each Day */}
                       {weekDates.map((date) => {
                         const today = isToday(date)
+                        const booking = findBookingForSlot(date, slot.hour, slot.minute)
+
                         return (
                           <td
                             key={`${date.toISOString()}-${slot.label}`}
-                            className={`border-b border-r border-gray-200 p-1 h-16 hover:bg-blue-50 cursor-pointer transition-colors ${
-                              today ? 'bg-blue-25' : 'bg-white'
-                            }`}
+                            className={`border-b border-r border-gray-200 p-1 h-16 transition-colors ${
+                              booking ? '' : 'hover:bg-blue-50 cursor-pointer'
+                            } ${today ? 'bg-blue-25' : 'bg-white'}`}
                           >
-                            {/* Empty slot - ready for bookings */}
+                            {booking ? (
+                              <BookingCard
+                                clientName={booking.clientName}
+                                procedures={booking.procedures}
+                                totalDuration={booking.totalDuration}
+                                onClick={() => handleBookingClick(booking)}
+                              />
+                            ) : null}
                           </td>
                         )
                       })}
@@ -178,22 +306,37 @@ export default function CalendarPage() {
 
             {/* Single Day Time Slots */}
             <div className="divide-y divide-gray-200">
-              {timeSlots.map((slot) => (
-                <div
-                  key={slot.label}
-                  className="flex items-stretch hover:bg-blue-50 active:bg-blue-100 cursor-pointer transition-colors"
-                >
-                  {/* Time Label */}
-                  <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-3 py-4 text-sm font-medium text-gray-600 text-right">
-                    {slot.label}
-                  </div>
+              {timeSlots.map((slot) => {
+                // For mobile, show today's bookings
+                const today = new Date()
+                const booking = findBookingForSlot(today, slot.hour, slot.minute)
 
-                  {/* Time Slot Content */}
-                  <div className="flex-1 p-4 min-h-[60px]">
-                    {/* Empty slot - ready for bookings */}
+                return (
+                  <div
+                    key={slot.label}
+                    className={`flex items-stretch transition-colors ${
+                      booking ? '' : 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
+                    }`}
+                  >
+                    {/* Time Label */}
+                    <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-3 py-4 text-sm font-medium text-gray-600 text-right">
+                      {slot.label}
+                    </div>
+
+                    {/* Time Slot Content */}
+                    <div className="flex-1 p-2 min-h-[60px]">
+                      {booking ? (
+                        <BookingCard
+                          clientName={booking.clientName}
+                          procedures={booking.procedures}
+                          totalDuration={booking.totalDuration}
+                          onClick={() => handleBookingClick(booking)}
+                        />
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         </div>
@@ -203,6 +346,24 @@ export default function CalendarPage() {
           <p>Нажмите на свободный временной слот, чтобы создать запись</p>
         </div>
       </main>
+
+      {/* Booking Details Modal */}
+      <BookingDetailsModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        booking={
+          selectedBooking
+            ? {
+                clientName: selectedBooking.clientName,
+                clientPhone: selectedBooking.clientPhone,
+                date: selectedBooking.date,
+                procedures: selectedBooking.procedures,
+                totalDuration: selectedBooking.totalDuration,
+                totalPrice: selectedBooking.totalPrice,
+              }
+            : null
+        }
+      />
     </div>
   )
 }
