@@ -13,7 +13,6 @@ import {
   getNextWeek,
   DAYS_OF_WEEK_RU,
 } from '@/lib/calendar-utils'
-import { getBookings } from '@/lib/airtable'
 import type { BookingFromAirtable, BookingDisplay } from '@/types/airtable'
 import BookingCard from '@/components/BookingCard'
 import BookingDetailsModal from '@/components/BookingDetailsModal'
@@ -50,8 +49,15 @@ export default function CalendarPage() {
         weekEnd.setDate(weekEnd.getDate() + 7)
         weekEnd.setHours(0, 0, 0, 0)
 
-        // Fetch all bookings (we'll filter on frontend for now)
-        const allBookings = await getBookings()
+        // Fetch bookings from API route (server-side)
+        const response = await fetch('/api/bookings')
+        const data = await response.json()
+
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to fetch bookings')
+        }
+
+        const allBookings = data.bookings
 
         // Parse and filter bookings
         const parsedBookings: BookingDisplay[] = allBookings
