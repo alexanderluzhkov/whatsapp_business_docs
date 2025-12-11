@@ -157,7 +157,7 @@ export default function CalendarPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-10">
+      <header className="bg-white shadow-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Календарь</h1>
 
@@ -223,7 +223,7 @@ export default function CalendarPage() {
             <div className="inline-block min-w-full align-middle">
               <table className="min-w-full border-collapse">
                 {/* Table Header - Days */}
-                <thead>
+                <thead className="sticky top-[160px] z-20">
                   <tr>
                     {/* Empty cell for time column */}
                     <th className="sticky left-0 z-20 bg-white border-b-2 border-r border-gray-200 w-20"></th>
