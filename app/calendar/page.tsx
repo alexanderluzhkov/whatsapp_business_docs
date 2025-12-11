@@ -11,6 +11,8 @@ import {
   generateTimeSlots,
   getPreviousWeek,
   getNextWeek,
+  parseTimeSlotDuration,
+  isTimeInBookingRange,
   DAYS_OF_WEEK_RU,
 } from '@/lib/calendar-utils'
 import type { BookingFromAirtable, BookingDisplay } from '@/types/airtable'
@@ -119,8 +121,8 @@ export default function CalendarPage() {
     setCurrentSunday(getSunday(new Date()))
   }
 
-  // Find booking for a specific time slot
-  const findBookingForSlot = (date: Date, hour: number, minute: number): BookingDisplay | undefined => {
+  // Find booking that STARTS at a specific time slot
+  const findBookingStartingAtSlot = (date: Date, hour: number, minute: number): BookingDisplay | undefined => {
     return bookings.find((booking) => {
       const bookingDate = new Date(booking.date)
       return (
@@ -131,6 +133,13 @@ export default function CalendarPage() {
         bookingDate.getMinutes() === minute
       )
     })
+  }
+
+  // Check if a slot is occupied by any booking (for blocking clicks on occupied slots)
+  const isSlotOccupiedByBooking = (date: Date, hour: number, minute: number): boolean => {
+    return bookings.some((booking) =>
+      isTimeInBookingRange(date, hour, minute, booking.date, booking.totalDuration)
+    )
   }
 
   // Handle booking click
@@ -192,7 +201,7 @@ export default function CalendarPage() {
       </header>
 
       {/* Calendar Grid */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-4 pt-40 pb-6">
         {/* Loading State */}
         {isLoading && (
           <div className="text-center py-8">
@@ -255,21 +264,27 @@ export default function CalendarPage() {
                       {/* Time Slots for Each Day */}
                       {weekDates.map((date) => {
                         const today = isToday(date)
-                        const booking = findBookingForSlot(date, slot.hour, slot.minute)
+                        const bookingStartingHere = findBookingStartingAtSlot(date, slot.hour, slot.minute)
+                        const isOccupied = isSlotOccupiedByBooking(date, slot.hour, slot.minute)
 
                         return (
                           <td
                             key={`${date.toISOString()}-${slot.label}`}
-                            className={`border-b border-r border-gray-200 p-1 h-16 transition-colors ${
-                              booking ? '' : 'hover:bg-blue-50 cursor-pointer'
+                            className={`border-b border-r border-gray-200 p-1 h-16 relative transition-colors ${
+                              isOccupied && !bookingStartingHere
+                                ? 'pointer-events-none'
+                                : bookingStartingHere
+                                ? ''
+                                : 'hover:bg-blue-50 cursor-pointer'
                             } ${today ? 'bg-blue-25' : 'bg-white'}`}
                           >
-                            {booking ? (
+                            {bookingStartingHere ? (
                               <BookingCard
-                                clientName={booking.clientName}
-                                procedures={booking.procedures}
-                                totalDuration={booking.totalDuration}
-                                onClick={() => handleBookingClick(booking)}
+                                clientName={bookingStartingHere.clientName}
+                                procedures={bookingStartingHere.procedures}
+                                totalDuration={bookingStartingHere.totalDuration}
+                                slotSpan={parseTimeSlotDuration(bookingStartingHere.totalDuration)}
+                                onClick={() => handleBookingClick(bookingStartingHere)}
                               />
                             ) : null}
                           </td>
@@ -315,13 +330,18 @@ export default function CalendarPage() {
               {timeSlots.map((slot) => {
                 // For mobile, show today's bookings
                 const today = new Date()
-                const booking = findBookingForSlot(today, slot.hour, slot.minute)
+                const bookingStartingHere = findBookingStartingAtSlot(today, slot.hour, slot.minute)
+                const isOccupied = isSlotOccupiedByBooking(today, slot.hour, slot.minute)
 
                 return (
                   <div
                     key={slot.label}
                     className={`flex items-stretch transition-colors ${
-                      booking ? '' : 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
+                      isOccupied && !bookingStartingHere
+                        ? 'pointer-events-none opacity-50'
+                        : bookingStartingHere
+                        ? ''
+                        : 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
                     }`}
                   >
                     {/* Time Label */}
@@ -330,13 +350,14 @@ export default function CalendarPage() {
                     </div>
 
                     {/* Time Slot Content */}
-                    <div className="flex-1 p-2 min-h-[60px]">
-                      {booking ? (
+                    <div className="flex-1 p-2 min-h-[60px] relative">
+                      {bookingStartingHere ? (
                         <BookingCard
-                          clientName={booking.clientName}
-                          procedures={booking.procedures}
-                          totalDuration={booking.totalDuration}
-                          onClick={() => handleBookingClick(booking)}
+                          clientName={bookingStartingHere.clientName}
+                          procedures={bookingStartingHere.procedures}
+                          totalDuration={bookingStartingHere.totalDuration}
+                          slotSpan={parseTimeSlotDuration(bookingStartingHere.totalDuration)}
+                          onClick={() => handleBookingClick(bookingStartingHere)}
                         />
                       ) : null}
                     </div>

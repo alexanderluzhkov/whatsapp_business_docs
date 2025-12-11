@@ -141,3 +141,33 @@ export function getNextWeek(currentSunday: Date): Date {
   newDate.setDate(newDate.getDate() + 7)
   return newDate
 }
+
+/**
+ * Parse duration string (e.g., "1:30") and return number of 30-minute slots
+ */
+export function parseTimeSlotDuration(duration: string): number {
+  const [hours, minutes] = duration.split(':').map(Number)
+  const totalMinutes = hours * 60 + minutes
+  return Math.ceil(totalMinutes / SLOT_DURATION_MINUTES)
+}
+
+/**
+ * Check if a time slot is within a booking's time range
+ */
+export function isTimeInBookingRange(
+  slotDate: Date,
+  slotHour: number,
+  slotMinute: number,
+  bookingDate: string,
+  bookingDuration: string
+): boolean {
+  const bookingStart = new Date(bookingDate)
+  const slotTime = new Date(slotDate)
+  slotTime.setHours(slotHour, slotMinute, 0, 0)
+
+  const [durationHours, durationMinutes] = bookingDuration.split(':').map(Number)
+  const bookingEnd = new Date(bookingStart)
+  bookingEnd.setMinutes(bookingEnd.getMinutes() + durationHours * 60 + durationMinutes)
+
+  return slotTime >= bookingStart && slotTime < bookingEnd
+}
