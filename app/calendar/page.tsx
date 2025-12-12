@@ -219,7 +219,7 @@ export default function CalendarPage() {
       </header>
 
       {/* Calendar Grid */}
-      <main className="max-w-7xl mx-auto px-4 pt-4 md:pt-40 pb-6">
+      <main className="max-w-7xl mx-auto px-4 py-6">
         {/* Loading State */}
         {isLoading && (
           <div className="text-center py-8">
@@ -241,7 +241,7 @@ export default function CalendarPage() {
             <div className="inline-block min-w-full align-middle">
               <table className="min-w-full border-collapse">
                 {/* Table Header - Days */}
-                <thead className="sticky top-[160px] z-20">
+                <thead className="sticky top-[145px] z-20">
                   <tr>
                     {/* Empty cell for time column */}
                     <th className="sticky left-0 z-20 bg-white border-b-2 border-r border-gray-200 w-20"></th>
