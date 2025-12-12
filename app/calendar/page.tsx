@@ -208,15 +208,14 @@ export default function CalendarPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          {/* Desktop View */}
-          <div className="hidden md:block">
-            {/* Sticky Table Header - Separate from table */}
-            <div className="sticky top-[145px] z-20 bg-white overflow-x-auto">
+        {/* Fixed Table Header - Desktop Only */}
+        <div className="hidden md:block fixed top-[145px] left-0 right-0 z-20 bg-white shadow-sm">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="bg-white rounded-t-lg overflow-x-auto">
               <div className="inline-block min-w-full align-middle">
                 <div className="flex border-b-2 border-gray-200">
                   {/* Empty cell for time column */}
-                  <div className="sticky left-0 z-20 bg-white border-r border-gray-200 w-20 flex-shrink-0"></div>
+                  <div className="bg-white border-r border-gray-200 w-20 flex-shrink-0"></div>
                   {/* Day headers */}
                   {weekDates.map((date, index) => {
                     const today = isToday(date)
@@ -243,6 +242,14 @@ export default function CalendarPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          {/* Desktop View */}
+          <div className="hidden md:block">
+            {/* Spacer for fixed header */}
+            <div className="h-[73px]"></div>
 
             {/* Table Body - Time Slots */}
             <div className="overflow-x-auto">
