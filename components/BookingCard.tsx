@@ -4,6 +4,7 @@ interface BookingCardProps {
   totalDuration: string
   slotSpan: number // Number of 30-minute slots this booking spans
   onClick: () => void
+  slotHeight?: number // Height in pixels of each slot (default: 64 for desktop)
 }
 
 export default function BookingCard({
@@ -12,9 +13,10 @@ export default function BookingCard({
   totalDuration,
   slotSpan,
   onClick,
+  slotHeight = 64,
 }: BookingCardProps) {
-  // Calculate height: 64px per slot (h-16), minus 1px for bottom border
-  const cardHeight = slotSpan * 64 - 1
+  // Calculate height based on slot height, minus 1px for bottom border
+  const cardHeight = slotSpan * slotHeight - 1
 
   // Join procedures with comma, truncate if too long
   const proceduresText = procedures.join(', ')

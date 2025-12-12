@@ -36,6 +36,12 @@ export default function CalendarPage() {
   const [selectedBooking, setSelectedBooking] = useState<BookingDisplay | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
+  // Mobile: selected day state (index 0-6 for Sunday-Saturday)
+  const [selectedDayIndex, setSelectedDayIndex] = useState(() => {
+    const today = new Date()
+    return today.getDay() // 0 = Sunday, 1 = Monday, etc.
+  })
+
   // Fetch bookings for current week
   useEffect(() => {
     const fetchBookings = async () => {
@@ -94,7 +100,7 @@ export default function CalendarPage() {
               bookingNumber: fields.Booking_Number_New || 0,
             }
           })
-          .filter((booking): booking is BookingDisplay => booking !== null)
+          .filter((booking: BookingDisplay | null): booking is BookingDisplay => booking !== null)
 
         setBookings(parsedBookings)
       } catch (err) {
@@ -111,14 +117,26 @@ export default function CalendarPage() {
   // Navigation handlers
   const handlePreviousWeek = () => {
     setCurrentSunday(getPreviousWeek(currentSunday))
+    // Reset mobile day selection to Sunday when changing weeks
+    setSelectedDayIndex(0)
   }
 
   const handleNextWeek = () => {
     setCurrentSunday(getNextWeek(currentSunday))
+    // Reset mobile day selection to Sunday when changing weeks
+    setSelectedDayIndex(0)
   }
 
   const handleToday = () => {
     setCurrentSunday(getSunday(new Date()))
+    // Also update mobile selected day to today
+    const today = new Date()
+    setSelectedDayIndex(today.getDay())
+  }
+
+  // Handle mobile day selection
+  const handleDaySelect = (dayIndex: number) => {
+    setSelectedDayIndex(dayIndex)
   }
 
   // Find booking that STARTS at a specific time slot
@@ -201,7 +219,7 @@ export default function CalendarPage() {
       </header>
 
       {/* Calendar Grid */}
-      <main className="max-w-7xl mx-auto px-4 pt-40 pb-6">
+      <main className="max-w-7xl mx-auto px-4 pt-4 md:pt-40 pb-6">
         {/* Loading State */}
         {isLoading && (
           <div className="text-center py-8">
@@ -304,13 +322,17 @@ export default function CalendarPage() {
               <div className="flex">
                 {weekDates.map((date, index) => {
                   const today = isToday(date)
+                  const isSelected = selectedDayIndex === index
                   return (
                     <button
                       key={date.toISOString()}
+                      onClick={() => handleDaySelect(index)}
                       className={`flex-1 min-w-[70px] px-3 py-3 text-center border-r border-gray-200 last:border-r-0 transition-colors ${
-                        today
+                        isSelected
                           ? 'bg-blue-600 text-white'
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                          : today
+                          ? 'bg-blue-100 text-blue-900'
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100 active:bg-gray-200'
                       }`}
                     >
                       <div className="text-xs font-medium">
@@ -328,10 +350,10 @@ export default function CalendarPage() {
             {/* Single Day Time Slots */}
             <div className="divide-y divide-gray-200">
               {timeSlots.map((slot) => {
-                // For mobile, show today's bookings
-                const today = new Date()
-                const bookingStartingHere = findBookingStartingAtSlot(today, slot.hour, slot.minute)
-                const isOccupied = isSlotOccupiedByBooking(today, slot.hour, slot.minute)
+                // For mobile, show selected day's bookings
+                const selectedDate = weekDates[selectedDayIndex]
+                const bookingStartingHere = findBookingStartingAtSlot(selectedDate, slot.hour, slot.minute)
+                const isOccupied = isSlotOccupiedByBooking(selectedDate, slot.hour, slot.minute)
 
                 return (
                   <div
@@ -357,6 +379,7 @@ export default function CalendarPage() {
                           procedures={bookingStartingHere.procedures}
                           totalDuration={bookingStartingHere.totalDuration}
                           slotSpan={parseTimeSlotDuration(bookingStartingHere.totalDuration)}
+                          slotHeight={60}
                           onClick={() => handleBookingClick(bookingStartingHere)}
                         />
                       ) : null}
