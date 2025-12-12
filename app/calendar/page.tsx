@@ -119,6 +119,21 @@ export default function CalendarPage() {
     setCurrentSunday(getSunday(new Date()))
   }
 
+  // Parse duration string (e.g., "1:30" -> 90 minutes)
+  const parseDuration = (duration: string): number => {
+    const parts = duration.split(':')
+    const hours = parseInt(parts[0] || '0', 10)
+    const minutes = parseInt(parts[1] || '0', 10)
+    return hours * 60 + minutes
+  }
+
+  // Calculate booking height in pixels (64px per 30-minute slot)
+  const calculateBookingHeight = (duration: string): number => {
+    const totalMinutes = parseDuration(duration)
+    const slots = totalMinutes / 30
+    return slots * 64 // 64px = h-16
+  }
+
   // Find booking for a specific time slot
   const findBookingForSlot = (date: Date, hour: number, minute: number): BookingDisplay | undefined => {
     return bookings.find((booking) => {
@@ -129,6 +144,34 @@ export default function CalendarPage() {
         bookingDate.getFullYear() === date.getFullYear() &&
         bookingDate.getHours() === hour &&
         bookingDate.getMinutes() === minute
+      )
+    })
+  }
+
+  // Check if current slot is occupied by a booking that started earlier
+  const isSlotOccupiedByEarlierBooking = (date: Date, hour: number, minute: number): boolean => {
+    return bookings.some((booking) => {
+      const bookingDate = new Date(booking.date)
+
+      // Check if same day
+      if (
+        bookingDate.getDate() !== date.getDate() ||
+        bookingDate.getMonth() !== date.getMonth() ||
+        bookingDate.getFullYear() !== date.getFullYear()
+      ) {
+        return false
+      }
+
+      // Calculate booking end time
+      const bookingStartMinutes = bookingDate.getHours() * 60 + bookingDate.getMinutes()
+      const bookingDurationMinutes = parseDuration(booking.totalDuration)
+      const bookingEndMinutes = bookingStartMinutes + bookingDurationMinutes
+      const currentSlotMinutes = hour * 60 + minute
+
+      // Check if current slot is within booking range (but not the start)
+      return (
+        currentSlotMinutes > bookingStartMinutes &&
+        currentSlotMinutes < bookingEndMinutes
       )
     })
   }
@@ -212,35 +255,37 @@ export default function CalendarPage() {
         <div className="hidden md:block fixed top-[145px] left-0 right-0 z-20 bg-white shadow-sm">
           <div className="max-w-7xl mx-auto px-4">
             <div className="bg-white rounded-t-lg overflow-x-auto">
-              <div className="inline-block min-w-full align-middle">
-                <div className="flex border-b-2 border-gray-200">
-                  {/* Empty cell for time column */}
-                  <div className="bg-white border-r border-gray-200 w-20 flex-shrink-0"></div>
-                  {/* Day headers */}
-                  {weekDates.map((date, index) => {
-                    const today = isToday(date)
-                    return (
-                      <div
-                        key={date.toISOString()}
-                        className={`px-2 py-3 text-center min-w-[120px] flex-1 ${
-                          today ? 'bg-blue-50' : 'bg-gray-50'
-                        }`}
-                      >
-                        <div className="font-semibold text-sm text-gray-700">
-                          {DAYS_OF_WEEK_RU[index]}
-                        </div>
-                        <div
-                          className={`text-lg font-bold mt-1 ${
-                            today ? 'text-blue-600' : 'text-gray-900'
+              <table className="min-w-full border-collapse">
+                <thead>
+                  <tr>
+                    {/* Empty cell for time column */}
+                    <th className="bg-white border-b-2 border-r border-gray-200 w-20"></th>
+                    {/* Day headers */}
+                    {weekDates.map((date, index) => {
+                      const today = isToday(date)
+                      return (
+                        <th
+                          key={date.toISOString()}
+                          className={`border-b-2 border-gray-200 px-2 py-3 text-center min-w-[120px] ${
+                            today ? 'bg-blue-50' : 'bg-gray-50'
                           }`}
                         >
-                          {formatDate(date)}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
+                          <div className="font-semibold text-sm text-gray-700">
+                            {DAYS_OF_WEEK_RU[index]}
+                          </div>
+                          <div
+                            className={`text-lg font-bold mt-1 ${
+                              today ? 'text-blue-600' : 'text-gray-900'
+                            }`}
+                          >
+                            {formatDate(date)}
+                          </div>
+                        </th>
+                      )
+                    })}
+                  </tr>
+                </thead>
+              </table>
             </div>
           </div>
         </div>
@@ -267,21 +312,31 @@ export default function CalendarPage() {
                       {weekDates.map((date) => {
                         const today = isToday(date)
                         const booking = findBookingForSlot(date, slot.hour, slot.minute)
+                        const isOccupied = isSlotOccupiedByEarlierBooking(date, slot.hour, slot.minute)
 
                         return (
                           <td
                             key={`${date.toISOString()}-${slot.label}`}
-                            className={`border-b border-r border-gray-200 p-1 h-16 transition-colors ${
-                              booking ? '' : 'hover:bg-blue-50 cursor-pointer'
-                            } ${today ? 'bg-blue-25' : 'bg-white'}`}
+                            className={`border-b border-r border-gray-200 p-1 h-16 transition-colors relative ${
+                              booking || isOccupied ? '' : 'hover:bg-blue-50 cursor-pointer'
+                            } ${today ? 'bg-blue-25' : 'bg-white'} ${
+                              isOccupied ? 'bg-gray-100' : ''
+                            }`}
                           >
                             {booking ? (
-                              <BookingCard
-                                clientName={booking.clientName}
-                                procedures={booking.procedures}
-                                totalDuration={booking.totalDuration}
-                                onClick={() => handleBookingClick(booking)}
-                              />
+                              <div
+                                style={{
+                                  height: `${calculateBookingHeight(booking.totalDuration)}px`,
+                                }}
+                                className="absolute top-1 left-1 right-1"
+                              >
+                                <BookingCard
+                                  clientName={booking.clientName}
+                                  procedures={booking.procedures}
+                                  totalDuration={booking.totalDuration}
+                                  onClick={() => handleBookingClick(booking)}
+                                />
+                              </div>
                             ) : null}
                           </td>
                         )
