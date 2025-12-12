@@ -148,7 +148,7 @@ export default function CalendarPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-10">
+      <header className="bg-white shadow-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Календарь</h1>
 
@@ -210,41 +210,45 @@ export default function CalendarPage() {
 
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           {/* Desktop View */}
-          <div className="hidden md:block overflow-x-auto">
-            <div className="inline-block min-w-full align-middle">
-              <table className="min-w-full border-collapse">
-                {/* Table Header - Days */}
-                <thead>
-                  <tr>
-                    {/* Empty cell for time column */}
-                    <th className="sticky left-0 z-20 bg-white border-b-2 border-r border-gray-200 w-20"></th>
-                    {weekDates.map((date, index) => {
-                      const today = isToday(date)
-                      return (
-                        <th
-                          key={date.toISOString()}
-                          className={`border-b-2 border-gray-200 px-2 py-3 text-center min-w-[120px] ${
-                            today ? 'bg-blue-50' : 'bg-gray-50'
+          <div className="hidden md:block">
+            {/* Sticky Table Header - Separate from table */}
+            <div className="sticky top-[145px] z-20 bg-white overflow-x-auto">
+              <div className="inline-block min-w-full align-middle">
+                <div className="flex border-b-2 border-gray-200">
+                  {/* Empty cell for time column */}
+                  <div className="sticky left-0 z-20 bg-white border-r border-gray-200 w-20 flex-shrink-0"></div>
+                  {/* Day headers */}
+                  {weekDates.map((date, index) => {
+                    const today = isToday(date)
+                    return (
+                      <div
+                        key={date.toISOString()}
+                        className={`px-2 py-3 text-center min-w-[120px] flex-1 ${
+                          today ? 'bg-blue-50' : 'bg-gray-50'
+                        }`}
+                      >
+                        <div className="font-semibold text-sm text-gray-700">
+                          {DAYS_OF_WEEK_RU[index]}
+                        </div>
+                        <div
+                          className={`text-lg font-bold mt-1 ${
+                            today ? 'text-blue-600' : 'text-gray-900'
                           }`}
                         >
-                          <div className="font-semibold text-sm text-gray-700">
-                            {DAYS_OF_WEEK_RU[index]}
-                          </div>
-                          <div
-                            className={`text-lg font-bold mt-1 ${
-                              today ? 'text-blue-600' : 'text-gray-900'
-                            }`}
-                          >
-                            {formatDate(date)}
-                          </div>
-                        </th>
-                      )
-                    })}
-                  </tr>
-                </thead>
+                          {formatDate(date)}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
 
-                {/* Table Body - Time Slots */}
-                <tbody>
+            {/* Table Body - Time Slots */}
+            <div className="overflow-x-auto">
+              <div className="inline-block min-w-full align-middle">
+                <table className="min-w-full border-collapse">
+                  <tbody>
                   {timeSlots.map((slot) => (
                     <tr key={slot.label}>
                       {/* Time Label */}
@@ -277,8 +281,9 @@ export default function CalendarPage() {
                       })}
                     </tr>
                   ))}
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
