@@ -64,11 +64,6 @@ export default function CalendarPage() {
           .map((booking: any) => {
             const fields = booking.fields
 
-            // Skip if no client name
-            if (!fields['Name (from Client)'] || fields['Name (from Client)'].length === 0) {
-              return null
-            }
-
             // Skip if no date
             if (!fields.Date) {
               return null
@@ -81,9 +76,21 @@ export default function CalendarPage() {
               return null
             }
 
+            // Try to get client name from multiple sources
+            let clientName = 'Неизвестный клиент'
+            if (fields['Name (from Client)'] && fields['Name (from Client)'].length > 0) {
+              clientName = fields['Name (from Client)'][0]
+            } else if (fields.Booking) {
+              // Extract name from booking field if available (e.g., "Yulia (27): ...")
+              const match = fields.Booking.match(/^([^(]+)/)
+              if (match) {
+                clientName = match[1].trim()
+              }
+            }
+
             return {
               id: booking.id,
-              clientName: fields['Name (from Client)'][0],
+              clientName,
               clientPhone: fields['Phone_Number']?.[0] || 'Не указан',
               date: fields.Date,
               procedures: fields['Name (from Procedures)'] || [],
