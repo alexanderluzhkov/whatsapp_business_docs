@@ -21,16 +21,16 @@ export default function BookingCard({
   return (
     <button
       onClick={onClick}
-      className="w-full h-full min-h-[44px] bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white rounded-md p-2 text-left cursor-pointer transition-colors shadow-sm"
+      className="w-full h-full min-h-[44px] bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white rounded-md p-2 text-left cursor-pointer transition-colors shadow-sm flex flex-col justify-start"
     >
-      <div className="space-y-0.5">
+      <div className="space-y-1">
         {/* Client Name */}
-        <div className="font-semibold text-xs leading-tight truncate">
+        <div className="font-semibold text-sm leading-tight truncate">
           {clientName}
         </div>
 
         {/* Procedures */}
-        <div className="text-xs leading-tight opacity-90" title={proceduresText}>
+        <div className="text-xs leading-tight opacity-90 line-clamp-2" title={proceduresText}>
           {truncatedProcedures}
         </div>
 
