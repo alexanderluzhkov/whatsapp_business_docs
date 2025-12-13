@@ -253,38 +253,40 @@ export default function CalendarPage() {
 
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           {/* Desktop View */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="min-w-full border-collapse">
-              <thead className="sticky top-[145px] z-20 bg-white shadow-sm">
-                <tr>
-                  {/* Empty cell for time column */}
-                  <th className="bg-white border-b-2 border-r border-gray-200 w-20"></th>
-                  {/* Day headers */}
-                  {weekDates.map((date, index) => {
-                    const today = isToday(date)
-                    return (
-                      <th
-                        key={date.toISOString()}
-                        className={`border-b-2 border-gray-200 px-2 py-3 text-center min-w-[120px] ${
-                          today ? 'bg-blue-50' : 'bg-gray-50'
-                        }`}
-                      >
-                        <div className="font-semibold text-sm text-gray-700">
-                          {DAYS_OF_WEEK_RU[index]}
-                        </div>
-                        <div
-                          className={`text-lg font-bold mt-1 ${
-                            today ? 'text-blue-600' : 'text-gray-900'
+          <div className="hidden md:block">
+            {/* Scrollable calendar container with fixed height */}
+            <div className="h-[calc(100vh-300px)] overflow-y-auto">
+              <table className="min-w-full border-collapse">
+                <thead className="sticky top-0 z-20 bg-white shadow-sm">
+                  <tr>
+                    {/* Empty cell for time column */}
+                    <th className="bg-white border-b-2 border-r border-gray-200 w-20"></th>
+                    {/* Day headers */}
+                    {weekDates.map((date, index) => {
+                      const today = isToday(date)
+                      return (
+                        <th
+                          key={date.toISOString()}
+                          className={`border-b-2 border-gray-200 px-2 py-3 text-center min-w-[120px] ${
+                            today ? 'bg-blue-50' : 'bg-gray-50'
                           }`}
                         >
-                          {formatDate(date)}
-                        </div>
-                      </th>
-                    )
-                  })}
-                </tr>
-              </thead>
-              <tbody>
+                          <div className="font-semibold text-sm text-gray-700">
+                            {DAYS_OF_WEEK_RU[index]}
+                          </div>
+                          <div
+                            className={`text-lg font-bold mt-1 ${
+                              today ? 'text-blue-600' : 'text-gray-900'
+                            }`}
+                          >
+                            {formatDate(date)}
+                          </div>
+                        </th>
+                      )
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
                   {timeSlots.map((slot) => (
                     <tr key={slot.label}>
                       {/* Time Label */}
@@ -327,8 +329,9 @@ export default function CalendarPage() {
                       })}
                     </tr>
                   ))}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Mobile View - Day Selector + Single Day Grid */}
