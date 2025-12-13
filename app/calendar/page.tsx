@@ -251,56 +251,40 @@ export default function CalendarPage() {
           </div>
         )}
 
-        {/* Fixed Table Header - Desktop Only */}
-        <div className="hidden md:block fixed top-[145px] left-0 right-0 z-20 bg-white shadow-sm">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="bg-white rounded-t-lg overflow-x-auto">
-              <table className="min-w-full border-collapse">
-                <thead>
-                  <tr>
-                    {/* Empty cell for time column */}
-                    <th className="bg-white border-b-2 border-r border-gray-200 w-20"></th>
-                    {/* Day headers */}
-                    {weekDates.map((date, index) => {
-                      const today = isToday(date)
-                      return (
-                        <th
-                          key={date.toISOString()}
-                          className={`border-b-2 border-gray-200 px-2 py-3 text-center min-w-[120px] ${
-                            today ? 'bg-blue-50' : 'bg-gray-50'
-                          }`}
-                        >
-                          <div className="font-semibold text-sm text-gray-700">
-                            {DAYS_OF_WEEK_RU[index]}
-                          </div>
-                          <div
-                            className={`text-lg font-bold mt-1 ${
-                              today ? 'text-blue-600' : 'text-gray-900'
-                            }`}
-                          >
-                            {formatDate(date)}
-                          </div>
-                        </th>
-                      )
-                    })}
-                  </tr>
-                </thead>
-              </table>
-            </div>
-          </div>
-        </div>
-
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           {/* Desktop View */}
-          <div className="hidden md:block">
-            {/* Spacer for fixed header */}
-            <div className="h-[73px]"></div>
-
-            {/* Table Body - Time Slots */}
-            <div className="overflow-x-auto">
-              <div className="inline-block min-w-full align-middle">
-                <table className="min-w-full border-collapse">
-                  <tbody>
+          <div className="hidden md:block overflow-x-auto">
+            <table className="min-w-full border-collapse">
+              <thead className="sticky top-[145px] z-20 bg-white shadow-sm">
+                <tr>
+                  {/* Empty cell for time column */}
+                  <th className="bg-white border-b-2 border-r border-gray-200 w-20"></th>
+                  {/* Day headers */}
+                  {weekDates.map((date, index) => {
+                    const today = isToday(date)
+                    return (
+                      <th
+                        key={date.toISOString()}
+                        className={`border-b-2 border-gray-200 px-2 py-3 text-center min-w-[120px] ${
+                          today ? 'bg-blue-50' : 'bg-gray-50'
+                        }`}
+                      >
+                        <div className="font-semibold text-sm text-gray-700">
+                          {DAYS_OF_WEEK_RU[index]}
+                        </div>
+                        <div
+                          className={`text-lg font-bold mt-1 ${
+                            today ? 'text-blue-600' : 'text-gray-900'
+                          }`}
+                        >
+                          {formatDate(date)}
+                        </div>
+                      </th>
+                    )
+                  })}
+                </tr>
+              </thead>
+              <tbody>
                   {timeSlots.map((slot) => (
                     <tr key={slot.label}>
                       {/* Time Label */}
@@ -343,10 +327,8 @@ export default function CalendarPage() {
                       })}
                     </tr>
                   ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+              </tbody>
+            </table>
           </div>
 
           {/* Mobile View - Day Selector + Single Day Grid */}
