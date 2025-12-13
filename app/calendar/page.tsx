@@ -314,7 +314,7 @@ export default function CalendarPage() {
                                 style={{
                                   height: `${calculateBookingHeight(booking.totalDuration)}px`,
                                 }}
-                                className="absolute top-1 left-1 right-1"
+                                className="absolute top-1 left-1 right-1 z-10"
                               >
                                 <BookingCard
                                   clientName={booking.clientName}
