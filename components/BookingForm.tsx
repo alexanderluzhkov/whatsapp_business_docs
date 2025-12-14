@@ -335,48 +335,48 @@ export default function BookingForm({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Клиент <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  placeholder="Выберите клиента"
-                  value={clientSearch}
-                  onChange={(e) => {
-                    setClientSearch(e.target.value)
-                    // Clear selected client when user starts typing
-                    if (selectedClientId) {
-                      setSelectedClientId('')
-                    }
-                  }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-                {clientSearch && (
-                  <div className="mt-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg divide-y divide-gray-200">
-                    {filteredClients.length === 0 ? (
-                      <div className="px-4 py-3 text-gray-500 text-sm">
-                        Клиенты не найдены
-                      </div>
-                    ) : (
-                      filteredClients.map((client) => (
-                        <button
-                          key={client.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedClientId(client.id)
-                            setClientSearch('')
-                          }}
-                          className={`w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors ${
-                            selectedClientId === client.id ? 'bg-blue-100' : 'bg-white'
-                          }`}
-                        >
-                          <div className="text-sm font-medium text-gray-900">
-                            {formatClientDisplay(client)}
+
+                {/* Show search input only when no client is selected */}
+                {!selectedClient && (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Выберите клиента"
+                      value={clientSearch}
+                      onChange={(e) => setClientSearch(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                    {clientSearch && (
+                      <div className="mt-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg divide-y divide-gray-200">
+                        {filteredClients.length === 0 ? (
+                          <div className="px-4 py-3 text-gray-500 text-sm">
+                            Клиенты не найдены
                           </div>
-                        </button>
-                      ))
+                        ) : (
+                          filteredClients.map((client) => (
+                            <button
+                              key={client.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedClientId(client.id)
+                                setClientSearch('')
+                              }}
+                              className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors bg-white"
+                            >
+                              <div className="text-sm font-medium text-gray-900">
+                                {formatClientDisplay(client)}
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
                     )}
-                  </div>
+                  </>
                 )}
-                {selectedClient && !clientSearch && (
-                  <div className="mt-2 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+
+                {/* Show selected client with change button */}
+                {selectedClient && (
+                  <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
                     <div className="text-sm font-medium text-blue-900">
                       {formatClientDisplay(selectedClient)}
                     </div>
