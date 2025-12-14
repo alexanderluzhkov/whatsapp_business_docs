@@ -36,6 +36,8 @@ export default function BookingForm({
   const [selectedClientId, setSelectedClientId] = useState<string>('')
   const [selectedProcedureIds, setSelectedProcedureIds] = useState<string[]>([])
   const [clientSearch, setClientSearch] = useState('')
+  const [editableDate, setEditableDate] = useState('')
+  const [editableTime, setEditableTime] = useState('')
 
   // UI state
   const [isLoadingData, setIsLoadingData] = useState(true)
@@ -104,6 +106,11 @@ export default function BookingForm({
   // Reset form when modal opens/closes, or pre-fill in edit mode
   useEffect(() => {
     if (isOpen) {
+      // Set editable date and time from props
+      const dateStr = selectedDate.toISOString().split('T')[0] // YYYY-MM-DD
+      setEditableDate(dateStr)
+      setEditableTime(selectedTime)
+
       if (editMode && initialClientId && initialProcedureIds) {
         // Edit mode: pre-fill with existing data
         setSelectedClientId(initialClientId)
@@ -118,18 +125,18 @@ export default function BookingForm({
       setError(null)
       setConflictWarning(null)
     }
-  }, [isOpen, editMode, initialClientId, initialProcedureIds])
+  }, [isOpen, editMode, initialClientId, initialProcedureIds, selectedDate, selectedTime])
 
   // Check for conflicts when procedures change
   useEffect(() => {
-    if (selectedProcedureIds.length === 0) {
+    if (selectedProcedureIds.length === 0 || !editableDate || !editableTime) {
       setConflictWarning(null)
       return
     }
 
     const totalMinutes = calculateTotalMinutes()
-    const [hours, minutes] = selectedTime.split(':').map(Number)
-    const bookingStart = new Date(selectedDate)
+    const [hours, minutes] = editableTime.split(':').map(Number)
+    const bookingStart = new Date(editableDate)
     bookingStart.setHours(hours, minutes, 0, 0)
 
     const bookingEnd = new Date(bookingStart)
@@ -160,7 +167,7 @@ export default function BookingForm({
     } else {
       setConflictWarning(null)
     }
-  }, [selectedProcedureIds, selectedDate, selectedTime, existingBookings, editMode, bookingId])
+  }, [selectedProcedureIds, editableDate, editableTime, existingBookings, editMode, bookingId])
 
   // Parse duration string (e.g., "1:30" -> 90 minutes)
   const parseDuration = (duration: string): number => {
@@ -298,8 +305,8 @@ export default function BookingForm({
 
     try {
       // Combine date and time into ISO string
-      const [hours, minutes] = selectedTime.split(':').map(Number)
-      const bookingDate = new Date(selectedDate)
+      const [hours, minutes] = editableTime.split(':').map(Number)
+      const bookingDate = new Date(editableDate)
       bookingDate.setHours(hours, minutes, 0, 0)
 
       if (editMode && bookingId) {
@@ -397,13 +404,28 @@ export default function BookingForm({
           {/* Form Fields */}
           {!isLoadingData && (
             <>
-              {/* Date & Time (Read-only) */}
+              {/* Date & Time (Editable) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Дата и время
                 </label>
-                <div className="px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 font-medium">
-                  {formatDateTime()}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <input
+                      type="date"
+                      value={editableDate}
+                      onChange={(e) => setEditableDate(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="time"
+                      value={editableTime}
+                      onChange={(e) => setEditableTime(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                  </div>
                 </div>
               </div>
 
