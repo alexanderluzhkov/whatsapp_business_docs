@@ -16,6 +16,7 @@ import {
 import type { BookingFromAirtable, BookingDisplay } from '@/types/airtable'
 import BookingCard from '@/components/BookingCard'
 import BookingDetailsModal from '@/components/BookingDetailsModal'
+import BookingForm from '@/components/BookingForm'
 
 export default function CalendarPage() {
   // State for current week (Sunday - Israel timezone)
@@ -33,6 +34,10 @@ export default function CalendarPage() {
   // Modal state
   const [selectedBooking, setSelectedBooking] = useState<BookingDisplay | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+  // Booking form state
+  const [selectedSlot, setSelectedSlot] = useState<{ date: Date; time: string } | null>(null)
+  const [isBookingFormOpen, setIsBookingFormOpen] = useState(false)
 
   // Fetch bookings for current week
   useEffect(() => {
@@ -99,7 +104,7 @@ export default function CalendarPage() {
               bookingNumber: fields.Booking_Number_New || 0,
             }
           })
-          .filter((booking): booking is BookingDisplay => booking !== null)
+          .filter((booking: BookingDisplay | null): booking is BookingDisplay => booking !== null)
 
         setBookings(parsedBookings)
       } catch (err) {
@@ -193,6 +198,25 @@ export default function CalendarPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false)
     setSelectedBooking(null)
+  }
+
+  // Handle empty slot click
+  const handleSlotClick = (date: Date, hour: number, minute: number) => {
+    const timeLabel = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+    setSelectedSlot({ date, time: timeLabel })
+    setIsBookingFormOpen(true)
+  }
+
+  // Handle booking creation
+  const handleBookingCreated = () => {
+    // Refresh bookings by re-triggering the useEffect
+    setCurrentSunday(new Date(currentSunday))
+  }
+
+  // Close booking form
+  const handleCloseBookingForm = () => {
+    setIsBookingFormOpen(false)
+    setSelectedSlot(null)
   }
 
   return (
@@ -315,6 +339,11 @@ export default function CalendarPage() {
                             } ${today ? 'bg-blue-25' : 'bg-white'} ${
                               isOccupied ? 'bg-gray-100' : ''
                             }`}
+                            onClick={() => {
+                              if (!booking && !isOccupied) {
+                                handleSlotClick(date, slot.hour, slot.minute)
+                              }
+                            }}
                           >
                             {booking ? (
                               <div
@@ -429,6 +458,18 @@ export default function CalendarPage() {
             : null
         }
       />
+
+      {/* Booking Form */}
+      {selectedSlot && (
+        <BookingForm
+          isOpen={isBookingFormOpen}
+          onClose={handleCloseBookingForm}
+          selectedDate={selectedSlot.date}
+          selectedTime={selectedSlot.time}
+          onBookingCreated={handleBookingCreated}
+          existingBookings={bookings}
+        />
+      )}
     </div>
   )
 }

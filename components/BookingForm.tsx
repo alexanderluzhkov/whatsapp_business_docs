@@ -1,0 +1,488 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { formatDateLong } from '@/lib/calendar-utils'
+import type { Client, Procedure, BookingDisplay } from '@/types/airtable'
+
+interface BookingFormProps {
+  isOpen: boolean
+  onClose: () => void
+  selectedDate: Date
+  selectedTime: string // "9:00", "14:30", etc.
+  onBookingCreated: () => void
+  existingBookings?: BookingDisplay[] // For conflict detection
+}
+
+export default function BookingForm({
+  isOpen,
+  onClose,
+  selectedDate,
+  selectedTime,
+  onBookingCreated,
+  existingBookings = [],
+}: BookingFormProps) {
+  // Form state
+  const [clients, setClients] = useState<Client[]>([])
+  const [procedures, setProcedures] = useState<Procedure[]>([])
+  const [selectedClientId, setSelectedClientId] = useState<string>('')
+  const [selectedProcedureIds, setSelectedProcedureIds] = useState<string[]>([])
+  const [clientSearch, setClientSearch] = useState('')
+
+  // UI state
+  const [isLoadingData, setIsLoadingData] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [conflictWarning, setConflictWarning] = useState<string | null>(null)
+
+  // Close modal on ESC key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape)
+      document.body.style.overflow = 'hidden'
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+      document.body.style.overflow = 'unset'
+    }
+  }, [isOpen, onClose])
+
+  // Load clients and procedures on mount
+  useEffect(() => {
+    if (!isOpen) return
+
+    const loadData = async () => {
+      setIsLoadingData(true)
+      setError(null)
+
+      try {
+        // Fetch clients and procedures in parallel
+        const [clientsRes, proceduresRes] = await Promise.all([
+          fetch('/api/clients'),
+          fetch('/api/procedures'),
+        ])
+
+        const clientsData = await clientsRes.json()
+        const proceduresData = await proceduresRes.json()
+
+        if (!clientsData.success) {
+          throw new Error(clientsData.error || 'Не удалось загрузить клиентов')
+        }
+
+        if (!proceduresData.success) {
+          throw new Error(proceduresData.error || 'Не удалось загрузить процедуры')
+        }
+
+        setClients(clientsData.clients)
+        setProcedures(proceduresData.procedures)
+      } catch (err) {
+        console.error('Error loading data:', err)
+        setError(err instanceof Error ? err.message : 'Ошибка загрузки данных')
+      } finally {
+        setIsLoadingData(false)
+      }
+    }
+
+    loadData()
+  }, [isOpen])
+
+  // Reset form when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedClientId('')
+      setSelectedProcedureIds([])
+      setClientSearch('')
+      setError(null)
+      setConflictWarning(null)
+    }
+  }, [isOpen])
+
+  // Check for conflicts when procedures change
+  useEffect(() => {
+    if (selectedProcedureIds.length === 0) {
+      setConflictWarning(null)
+      return
+    }
+
+    const totalMinutes = calculateTotalMinutes()
+    const [hours, minutes] = selectedTime.split(':').map(Number)
+    const bookingStart = new Date(selectedDate)
+    bookingStart.setHours(hours, minutes, 0, 0)
+
+    const bookingEnd = new Date(bookingStart)
+    bookingEnd.setMinutes(bookingEnd.getMinutes() + totalMinutes)
+
+    // Check for conflicts
+    const conflict = existingBookings.find((booking) => {
+      const existingStart = new Date(booking.date)
+      const existingDurationMinutes = parseDuration(booking.totalDuration)
+      const existingEnd = new Date(existingStart)
+      existingEnd.setMinutes(existingEnd.getMinutes() + existingDurationMinutes)
+
+      // Check if bookings overlap
+      return (
+        (bookingStart >= existingStart && bookingStart < existingEnd) ||
+        (bookingEnd > existingStart && bookingEnd <= existingEnd) ||
+        (bookingStart <= existingStart && bookingEnd >= existingEnd)
+      )
+    })
+
+    if (conflict) {
+      setConflictWarning(`⚠️ Внимание: время пересекается с записью ${conflict.clientName}`)
+    } else {
+      setConflictWarning(null)
+    }
+  }, [selectedProcedureIds, selectedDate, selectedTime, existingBookings])
+
+  // Parse duration string (e.g., "1:30" -> 90 minutes)
+  const parseDuration = (duration: string): number => {
+    const parts = duration.split(':')
+    const hours = parseInt(parts[0] || '0', 10)
+    const minutes = parseInt(parts[1] || '0', 10)
+    return hours * 60 + minutes
+  }
+
+  // Convert seconds to HH:MM format
+  const formatDuration = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    return `${hours}:${minutes.toString().padStart(2, '0')}`
+  }
+
+  // Calculate total duration in minutes
+  const calculateTotalMinutes = (): number => {
+    return selectedProcedureIds.reduce((total, procId) => {
+      const procedure = procedures.find((p) => p.id === procId)
+      if (procedure?.fields.Duration) {
+        return total + Math.floor(procedure.fields.Duration / 60)
+      }
+      return total
+    }, 0)
+  }
+
+  // Calculate total price
+  const calculateTotalPrice = (): number => {
+    return selectedProcedureIds.reduce((total, procId) => {
+      const procedure = procedures.find((p) => p.id === procId)
+      if (procedure?.fields.Price) {
+        return total + procedure.fields.Price
+      }
+      return total
+    }, 0)
+  }
+
+  // Filter clients based on search
+  const filteredClients = clients.filter((client) => {
+    const searchLower = clientSearch.toLowerCase()
+    const firstName = client.fields['First Name']?.toLowerCase() || ''
+    const lastName = client.fields['Last Name']?.toLowerCase() || ''
+    const phone = client.fields.Phone_Number?.toLowerCase() || ''
+
+    return (
+      firstName.includes(searchLower) ||
+      lastName.includes(searchLower) ||
+      phone.includes(searchLower)
+    )
+  })
+
+  // Toggle procedure selection
+  const toggleProcedure = (procedureId: string) => {
+    setSelectedProcedureIds((prev) =>
+      prev.includes(procedureId)
+        ? prev.filter((id) => id !== procedureId)
+        : [...prev, procedureId]
+    )
+  }
+
+  // Format client display
+  const formatClientDisplay = (client: Client): string => {
+    const firstName = client.fields['First Name'] || ''
+    const lastName = client.fields['Last Name'] || ''
+    const phone = client.fields.Phone_Number || ''
+    const name = `${firstName} ${lastName}`.trim() || 'Без имени'
+    return `${name} (${phone})`
+  }
+
+  // Get selected client
+  const selectedClient = clients.find((c) => c.id === selectedClientId)
+
+  // Format date and time for display
+  const formatDateTime = (): string => {
+    const months = [
+      'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+      'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
+    ]
+    const day = selectedDate.getDate()
+    const month = months[selectedDate.getMonth()]
+    const year = selectedDate.getFullYear()
+    return `${day} ${month} ${year}, ${selectedTime}`
+  }
+
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+
+    // Validate
+    if (!selectedClientId) {
+      setError('Пожалуйста, выберите клиента')
+      return
+    }
+
+    if (selectedProcedureIds.length === 0) {
+      setError('Пожалуйста, выберите хотя бы одну процедуру')
+      return
+    }
+
+    setIsSaving(true)
+
+    try {
+      // Combine date and time into ISO string
+      const [hours, minutes] = selectedTime.split(':').map(Number)
+      const bookingDate = new Date(selectedDate)
+      bookingDate.setHours(hours, minutes, 0, 0)
+
+      // Create booking
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clientId: selectedClientId,
+          procedureIds: selectedProcedureIds,
+          date: bookingDate.toISOString(),
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Не удалось создать запись')
+      }
+
+      // Success! Close modal and refresh
+      onBookingCreated()
+      onClose()
+    } catch (err) {
+      console.error('Error creating booking:', err)
+      setError(err instanceof Error ? err.message : 'Ошибка создания записи')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (!isOpen) return null
+
+  const totalMinutes = calculateTotalMinutes()
+  const totalPrice = calculateTotalPrice()
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 animate-fadeIn"
+      onClick={onClose}
+    >
+      {/* Modal Content */}
+      <div
+        className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-scaleIn"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+          <h2 className="text-xl font-bold text-gray-900">Новая запись</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Закрыть"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
+          {/* Loading State */}
+          {isLoadingData && (
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div>
+              <p className="mt-2 text-gray-600">Загрузка данных...</p>
+            </div>
+          )}
+
+          {/* Form Fields */}
+          {!isLoadingData && (
+            <>
+              {/* Date & Time (Read-only) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Дата и время
+                </label>
+                <div className="px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 font-medium">
+                  {formatDateTime()}
+                </div>
+              </div>
+
+              {/* Client Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Клиент <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Выберите клиента"
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+                {clientSearch && (
+                  <div className="mt-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg divide-y divide-gray-200">
+                    {filteredClients.length === 0 ? (
+                      <div className="px-4 py-3 text-gray-500 text-sm">
+                        Клиенты не найдены
+                      </div>
+                    ) : (
+                      filteredClients.map((client) => (
+                        <button
+                          key={client.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedClientId(client.id)
+                            setClientSearch(formatClientDisplay(client))
+                          }}
+                          className={`w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors ${
+                            selectedClientId === client.id ? 'bg-blue-100' : 'bg-white'
+                          }`}
+                        >
+                          <div className="text-sm font-medium text-gray-900">
+                            {formatClientDisplay(client)}
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+                {selectedClient && !clientSearch && (
+                  <div className="mt-2 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="text-sm font-medium text-blue-900">
+                      {formatClientDisplay(selectedClient)}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Procedures */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Процедуры <span className="text-red-500">*</span>
+                </label>
+                <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                  {procedures.map((procedure) => {
+                    const duration = procedure.fields.Duration
+                      ? formatDuration(procedure.fields.Duration)
+                      : '0:00'
+                    const price = Math.round(procedure.fields.Price || 0)
+                    const isSelected = selectedProcedureIds.includes(procedure.id)
+
+                    return (
+                      <label
+                        key={procedure.id}
+                        className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                          isSelected ? 'bg-purple-50 border border-purple-200' : 'bg-white border border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleProcedure(procedure.id)}
+                          className="mt-1 h-4 w-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">
+                            {procedure.fields.Name}
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1">
+                            {duration} • ₪{price}
+                          </div>
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Live Calculations */}
+              {selectedProcedureIds.length > 0 && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-sm text-purple-700 font-medium mb-1">
+                        Общая длительность
+                      </div>
+                      <div className="text-2xl font-bold text-purple-900">
+                        {Math.floor(totalMinutes / 60)}:{(totalMinutes % 60).toString().padStart(2, '0')}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-purple-700 font-medium mb-1">
+                        Общая стоимость
+                      </div>
+                      <div className="text-2xl font-bold text-purple-900">
+                        ₪{totalPrice}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Conflict Warning */}
+              {conflictWarning && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-start gap-2">
+                    <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-sm text-yellow-800">{conflictWarning}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Error Message */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-sm text-red-800">{error}</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Footer Buttons */}
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSaving}
+              className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-900 font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving || isLoadingData}
+              className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSaving ? 'Сохранение...' : 'Сохранить'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
