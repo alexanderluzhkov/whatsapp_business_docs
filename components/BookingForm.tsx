@@ -11,6 +11,11 @@ interface BookingFormProps {
   selectedTime: string // "9:00", "14:30", etc.
   onBookingCreated: () => void
   existingBookings?: BookingDisplay[] // For conflict detection
+  // Edit mode props
+  editMode?: boolean
+  bookingId?: string
+  initialClientId?: string
+  initialProcedureIds?: string[]
 }
 
 export default function BookingForm({
@@ -20,6 +25,10 @@ export default function BookingForm({
   selectedTime,
   onBookingCreated,
   existingBookings = [],
+  editMode = false,
+  bookingId,
+  initialClientId,
+  initialProcedureIds = [],
 }: BookingFormProps) {
   // Form state
   const [clients, setClients] = useState<Client[]>([])
@@ -92,16 +101,24 @@ export default function BookingForm({
     loadData()
   }, [isOpen])
 
-  // Reset form when modal opens/closes
+  // Reset form when modal opens/closes, or pre-fill in edit mode
   useEffect(() => {
     if (isOpen) {
-      setSelectedClientId('')
-      setSelectedProcedureIds([])
-      setClientSearch('')
+      if (editMode && initialClientId && initialProcedureIds) {
+        // Edit mode: pre-fill with existing data
+        setSelectedClientId(initialClientId)
+        setSelectedProcedureIds(initialProcedureIds)
+        setClientSearch('')
+      } else {
+        // Create mode: reset form
+        setSelectedClientId('')
+        setSelectedProcedureIds([])
+        setClientSearch('')
+      }
       setError(null)
       setConflictWarning(null)
     }
-  }, [isOpen])
+  }, [isOpen, editMode, initialClientId, initialProcedureIds])
 
   // Check for conflicts when procedures change
   useEffect(() => {
@@ -118,8 +135,13 @@ export default function BookingForm({
     const bookingEnd = new Date(bookingStart)
     bookingEnd.setMinutes(bookingEnd.getMinutes() + totalMinutes)
 
-    // Check for conflicts
+    // Check for conflicts (exclude current booking in edit mode)
     const conflict = existingBookings.find((booking) => {
+      // Skip the current booking being edited
+      if (editMode && bookingId && booking.id === bookingId) {
+        return false
+      }
+
       const existingStart = new Date(booking.date)
       const existingDurationMinutes = parseDuration(booking.totalDuration)
       const existingEnd = new Date(existingStart)
@@ -138,7 +160,7 @@ export default function BookingForm({
     } else {
       setConflictWarning(null)
     }
-  }, [selectedProcedureIds, selectedDate, selectedTime, existingBookings])
+  }, [selectedProcedureIds, selectedDate, selectedTime, existingBookings, editMode, bookingId])
 
   // Parse duration string (e.g., "1:30" -> 90 minutes)
   const parseDuration = (duration: string): number => {
@@ -224,6 +246,38 @@ export default function BookingForm({
     return `${day} ${month} ${year}, ${selectedTime}`
   }
 
+  // Handle delete booking
+  const handleDelete = async () => {
+    if (!editMode || !bookingId) return
+
+    const confirmed = window.confirm('Вы уверены, что хотите удалить эту запись?')
+    if (!confirmed) return
+
+    setIsSaving(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Не удалось удалить запись')
+      }
+
+      // Success! Close modal and refresh
+      onBookingCreated() // This also refreshes the calendar
+      onClose()
+    } catch (err) {
+      console.error('Error deleting booking:', err)
+      setError(err instanceof Error ? err.message : 'Ошибка удаления записи')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -248,31 +302,52 @@ export default function BookingForm({
       const bookingDate = new Date(selectedDate)
       bookingDate.setHours(hours, minutes, 0, 0)
 
-      // Create booking
-      const response = await fetch('/api/bookings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          clientId: selectedClientId,
-          procedureIds: selectedProcedureIds,
-          date: bookingDate.toISOString(),
-        }),
-      })
+      if (editMode && bookingId) {
+        // Update existing booking
+        const response = await fetch(`/api/bookings/${bookingId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            clientId: selectedClientId,
+            procedureIds: selectedProcedureIds,
+            date: bookingDate.toISOString(),
+          }),
+        })
 
-      const data = await response.json()
+        const data = await response.json()
 
-      if (!data.success) {
-        throw new Error(data.error || 'Не удалось создать запись')
+        if (!data.success) {
+          throw new Error(data.error || 'Не удалось обновить запись')
+        }
+      } else {
+        // Create new booking
+        const response = await fetch('/api/bookings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            clientId: selectedClientId,
+            procedureIds: selectedProcedureIds,
+            date: bookingDate.toISOString(),
+          }),
+        })
+
+        const data = await response.json()
+
+        if (!data.success) {
+          throw new Error(data.error || 'Не удалось создать запись')
+        }
       }
 
       // Success! Close modal and refresh
       onBookingCreated()
       onClose()
     } catch (err) {
-      console.error('Error creating booking:', err)
-      setError(err instanceof Error ? err.message : 'Ошибка создания записи')
+      console.error(`Error ${editMode ? 'updating' : 'creating'} booking:`, err)
+      setError(err instanceof Error ? err.message : `Ошибка ${editMode ? 'обновления' : 'создания'} записи`)
     } finally {
       setIsSaving(false)
     }
@@ -295,7 +370,9 @@ export default function BookingForm({
       >
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-          <h2 className="text-xl font-bold text-gray-900">Новая запись</h2>
+          <h2 className="text-xl font-bold text-gray-900">
+            {editMode ? 'Редактировать запись' : 'Новая запись'}
+          </h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -481,6 +558,16 @@ export default function BookingForm({
 
           {/* Footer Buttons */}
           <div className="flex gap-3 pt-4 border-t border-gray-200">
+            {editMode && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isSaving}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Удалить
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}

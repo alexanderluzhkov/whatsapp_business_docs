@@ -13,12 +13,14 @@ interface BookingDetailsModalProps {
     totalDuration: string
     totalPrice: number
   } | null
+  onEdit?: () => void
 }
 
 export default function BookingDetailsModal({
   isOpen,
   onClose,
   booking,
+  onEdit,
 }: BookingDetailsModalProps) {
   // Close modal on ESC key
   useEffect(() => {
@@ -182,12 +184,25 @@ export default function BookingDetailsModal({
 
         {/* Footer */}
         <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4">
-          <button
-            onClick={onClose}
-            className="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-900 font-medium rounded-lg transition-colors"
-          >
-            Закрыть
-          </button>
+          <div className="flex gap-3">
+            {onEdit && (
+              <button
+                onClick={() => {
+                  onEdit()
+                  onClose()
+                }}
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium rounded-lg transition-colors"
+              >
+                Редактировать
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-900 font-medium rounded-lg transition-colors"
+            >
+              Закрыть
+            </button>
+          </div>
         </div>
       </div>
     </div>

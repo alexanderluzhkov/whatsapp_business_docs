@@ -28,6 +28,7 @@ export default function CalendarPage() {
 
   // Booking state
   const [bookings, setBookings] = useState<BookingDisplay[]>([])
+  const [rawBookings, setRawBookings] = useState<any[]>([]) // Store raw Airtable data
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -38,6 +39,11 @@ export default function CalendarPage() {
   // Booking form state
   const [selectedSlot, setSelectedSlot] = useState<{ date: Date; time: string } | null>(null)
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false)
+  const [editBookingData, setEditBookingData] = useState<{
+    id: string
+    clientId: string
+    procedureIds: string[]
+  } | null>(null)
 
   // Fetch bookings for current week
   useEffect(() => {
@@ -63,6 +69,9 @@ export default function CalendarPage() {
         }
 
         const allBookings = data.bookings
+
+        // Store raw bookings for edit mode
+        setRawBookings(allBookings)
 
         // Parse and filter bookings
         const parsedBookings: BookingDisplay[] = allBookings
@@ -217,6 +226,41 @@ export default function CalendarPage() {
   const handleCloseBookingForm = () => {
     setIsBookingFormOpen(false)
     setSelectedSlot(null)
+    setEditBookingData(null)
+  }
+
+  // Handle edit booking
+  const handleEditBooking = () => {
+    if (!selectedBooking) return
+
+    // Find the raw booking data
+    const rawBooking = rawBookings.find((b) => b.id === selectedBooking.id)
+    if (!rawBooking) {
+      console.error('Raw booking data not found')
+      return
+    }
+
+    // Extract client ID and procedure IDs
+    const clientId = rawBooking.fields.Client?.[0]
+    const procedureIds = rawBooking.fields.Procedures || []
+
+    if (!clientId || procedureIds.length === 0) {
+      console.error('Missing client or procedures in booking data')
+      return
+    }
+
+    // Parse date and time from the booking
+    const bookingDate = new Date(selectedBooking.date)
+    const timeLabel = `${bookingDate.getHours().toString().padStart(2, '0')}:${bookingDate.getMinutes().toString().padStart(2, '0')}`
+
+    // Set edit mode data
+    setEditBookingData({
+      id: selectedBooking.id,
+      clientId,
+      procedureIds,
+    })
+    setSelectedSlot({ date: bookingDate, time: timeLabel })
+    setIsBookingFormOpen(true)
   }
 
   return (
@@ -457,6 +501,7 @@ export default function CalendarPage() {
               }
             : null
         }
+        onEdit={handleEditBooking}
       />
 
       {/* Booking Form */}
@@ -468,6 +513,10 @@ export default function CalendarPage() {
           selectedTime={selectedSlot.time}
           onBookingCreated={handleBookingCreated}
           existingBookings={bookings}
+          editMode={!!editBookingData}
+          bookingId={editBookingData?.id}
+          initialClientId={editBookingData?.clientId}
+          initialProcedureIds={editBookingData?.procedureIds}
         />
       )}
     </div>
