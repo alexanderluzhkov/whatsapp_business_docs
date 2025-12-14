@@ -339,7 +339,13 @@ export default function BookingForm({
                   type="text"
                   placeholder="Выберите клиента"
                   value={clientSearch}
-                  onChange={(e) => setClientSearch(e.target.value)}
+                  onChange={(e) => {
+                    setClientSearch(e.target.value)
+                    // Clear selected client when user starts typing
+                    if (selectedClientId) {
+                      setSelectedClientId('')
+                    }
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 />
                 {clientSearch && (
@@ -355,7 +361,7 @@ export default function BookingForm({
                           type="button"
                           onClick={() => {
                             setSelectedClientId(client.id)
-                            setClientSearch(formatClientDisplay(client))
+                            setClientSearch('')
                           }}
                           className={`w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors ${
                             selectedClientId === client.id ? 'bg-blue-100' : 'bg-white'
@@ -370,10 +376,20 @@ export default function BookingForm({
                   </div>
                 )}
                 {selectedClient && !clientSearch && (
-                  <div className="mt-2 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="mt-2 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
                     <div className="text-sm font-medium text-blue-900">
                       {formatClientDisplay(selectedClient)}
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedClientId('')
+                        setClientSearch('')
+                      }}
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      Изменить
+                    </button>
                   </div>
                 )}
               </div>
