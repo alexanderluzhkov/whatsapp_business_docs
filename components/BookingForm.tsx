@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { formatDateLong } from '@/lib/calendar-utils'
 import type { Client, Procedure, BookingDisplay } from '@/types/airtable'
 
@@ -28,7 +28,7 @@ export default function BookingForm({
   editMode = false,
   bookingId,
   initialClientId,
-  initialProcedureIds = [],
+  initialProcedureIds,
 }: BookingFormProps) {
   // Form state
   const [clients, setClients] = useState<Client[]>([])
@@ -46,6 +46,9 @@ export default function BookingForm({
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [conflictWarning, setConflictWarning] = useState<string | null>(null)
+
+  // Track previous isOpen state to detect when modal opens
+  const prevIsOpenRef = useRef(isOpen)
 
   // Close modal on ESC key
   useEffect(() => {
@@ -114,10 +117,17 @@ export default function BookingForm({
     }
   }, [isOpen, selectedDate, selectedTime])
 
-  // Reset form when modal opens/closes, or pre-fill in edit mode
+  // Reset form only when modal transitions from closed to open
   useEffect(() => {
-    if (isOpen) {
-      if (editMode && initialClientId && initialProcedureIds) {
+    const wasOpen = prevIsOpenRef.current
+    const isNowOpen = isOpen
+
+    // Update ref for next render
+    prevIsOpenRef.current = isOpen
+
+    // Only reset when modal opens (transitions from false to true)
+    if (!wasOpen && isNowOpen) {
+      if (editMode && initialClientId && initialProcedureIds && initialProcedureIds.length > 0) {
         // Edit mode: pre-fill with existing data
         setSelectedClientId(initialClientId)
         setSelectedProcedureIds(initialProcedureIds)
