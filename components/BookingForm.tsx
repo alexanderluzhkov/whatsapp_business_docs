@@ -39,6 +39,7 @@ export default function BookingForm({
   const [editableDate, setEditableDate] = useState('')
   const [editableTime, setEditableTime] = useState('')
   const [customDuration, setCustomDuration] = useState<number>(0) // in minutes
+  const [isDurationManuallyEdited, setIsDurationManuallyEdited] = useState(false) // Track manual edits
 
   // UI state
   const [isLoadingData, setIsLoadingData] = useState(true)
@@ -104,14 +105,18 @@ export default function BookingForm({
     loadData()
   }, [isOpen])
 
-  // Reset form when modal opens/closes, or pre-fill in edit mode
+  // Update editable date/time when props change (without resetting form)
   useEffect(() => {
     if (isOpen) {
-      // Set editable date and time from props
       const dateStr = selectedDate.toISOString().split('T')[0] // YYYY-MM-DD
       setEditableDate(dateStr)
       setEditableTime(selectedTime)
+    }
+  }, [isOpen, selectedDate, selectedTime])
 
+  // Reset form when modal opens/closes, or pre-fill in edit mode
+  useEffect(() => {
+    if (isOpen) {
       if (editMode && initialClientId && initialProcedureIds) {
         // Edit mode: pre-fill with existing data
         setSelectedClientId(initialClientId)
@@ -125,19 +130,21 @@ export default function BookingForm({
       }
       setError(null)
       setConflictWarning(null)
+      setIsDurationManuallyEdited(false)
+      setCustomDuration(0)
     }
-  }, [isOpen, editMode, initialClientId, initialProcedureIds, selectedDate, selectedTime])
+  }, [isOpen, editMode, initialClientId, initialProcedureIds])
 
-  // Update custom duration when procedures change
+  // Update custom duration when procedures change (only if not manually edited)
   useEffect(() => {
-    if (selectedProcedureIds.length > 0) {
+    if (selectedProcedureIds.length > 0 && procedures.length > 0) {
       const calculatedMinutes = calculateTotalMinutes()
-      // Only auto-update if custom duration is 0 or not manually changed
-      if (customDuration === 0 || customDuration === calculateTotalMinutes()) {
+      // Only auto-update if duration hasn't been manually edited
+      if (!isDurationManuallyEdited) {
         setCustomDuration(calculatedMinutes)
       }
     }
-  }, [selectedProcedureIds])
+  }, [selectedProcedureIds, procedures, isDurationManuallyEdited])
 
   // Check for conflicts when procedures or custom duration change
   useEffect(() => {
@@ -577,12 +584,13 @@ export default function BookingForm({
                           const minutes = parseHHMMToMinutes(e.target.value)
                           if (!isNaN(minutes)) {
                             setCustomDuration(minutes)
+                            setIsDurationManuallyEdited(true)
                           }
                         }}
                         placeholder="0:00"
                         className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none text-lg font-bold text-purple-900"
                       />
-                      {customDuration !== totalMinutes && totalMinutes > 0 && (
+                      {isDurationManuallyEdited && customDuration !== totalMinutes && totalMinutes > 0 && (
                         <div className="text-xs text-purple-600 mt-1">
                           Рассчитано из процедур: {formatMinutesToHHMM(totalMinutes)}
                         </div>
