@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   getSunday,
   getWeekDates,
@@ -40,6 +40,9 @@ export default function CalendarPage() {
     const today = new Date()
     return today.getDay()
   })
+
+  // Ref for day selector scroll container
+  const daySelectorRef = useRef<HTMLDivElement>(null)
 
   // Fetch bookings for current week
   useEffect(() => {
@@ -119,6 +122,28 @@ export default function CalendarPage() {
 
     fetchBookings()
   }, [currentSunday])
+
+  // Auto-scroll to selected day in mobile view
+  useEffect(() => {
+    if (daySelectorRef.current) {
+      const container = daySelectorRef.current
+      const buttons = container.querySelectorAll('button')
+      const selectedButton = buttons[selectedDayIndex]
+
+      if (selectedButton) {
+        // Calculate scroll position to center the selected button
+        const containerWidth = container.offsetWidth
+        const buttonLeft = selectedButton.offsetLeft
+        const buttonWidth = selectedButton.offsetWidth
+        const scrollPosition = buttonLeft - (containerWidth / 2) + (buttonWidth / 2)
+
+        container.scrollTo({
+          left: scrollPosition,
+          behavior: 'smooth'
+        })
+      }
+    }
+  }, [selectedDayIndex])
 
   // Navigation handlers
   const handlePreviousWeek = () => {
@@ -375,9 +400,20 @@ export default function CalendarPage() {
 
           {/* Mobile View - Day Selector + Single Day Grid */}
           <div className="md:hidden">
-            {/* Day Selector */}
-            <div className="overflow-x-auto border-b-2 border-gray-200">
-              <div className="flex">
+            {/* Day Selector - Sticky with Scroll Indicators */}
+            <div className="sticky top-[140px] z-20 bg-white border-b-2 border-gray-200 shadow-sm relative">
+              {/* Left scroll indicator */}
+              <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
+
+              {/* Right scroll indicator */}
+              <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none z-10"></div>
+
+              {/* Scrollable day selector */}
+              <div
+                ref={daySelectorRef}
+                className="overflow-x-auto scrollbar-hide"
+              >
+                <div className="flex">
                 {weekDates.map((date, index) => {
                   const today = isToday(date)
                   const isSelected = index === selectedDayIndex
@@ -426,6 +462,7 @@ export default function CalendarPage() {
                     </button>
                   )
                 })}
+                </div>
               </div>
             </div>
 
