@@ -16,6 +16,7 @@ interface BookingFormProps {
   bookingId?: string
   initialClientId?: string
   initialProcedureIds?: string[]
+  initialCustomDuration?: number // in minutes
 }
 
 export default function BookingForm({
@@ -29,6 +30,7 @@ export default function BookingForm({
   bookingId,
   initialClientId,
   initialProcedureIds,
+  initialCustomDuration,
 }: BookingFormProps) {
   // Form state
   const [clients, setClients] = useState<Client[]>([])
@@ -127,23 +129,32 @@ export default function BookingForm({
 
     // Only reset when modal opens (transitions from false to true)
     if (!wasOpen && isNowOpen) {
-      if (editMode && initialClientId && initialProcedureIds && initialProcedureIds.length > 0) {
+      if (editMode && initialClientId) {
         // Edit mode: pre-fill with existing data
         setSelectedClientId(initialClientId)
-        setSelectedProcedureIds(initialProcedureIds)
+        setSelectedProcedureIds(initialProcedureIds || [])
         setClientSearch('')
+
+        // Pre-fill custom duration if it exists
+        if (initialCustomDuration && initialCustomDuration > 0) {
+          setCustomDuration(initialCustomDuration)
+          setIsDurationManuallyEdited(true) // Mark as manually edited since it has custom duration
+        } else {
+          setCustomDuration(0)
+          setIsDurationManuallyEdited(false)
+        }
       } else {
         // Create mode: reset form
         setSelectedClientId('')
         setSelectedProcedureIds([])
         setClientSearch('')
+        setCustomDuration(0)
+        setIsDurationManuallyEdited(false)
       }
       setError(null)
       setConflictWarning(null)
-      setIsDurationManuallyEdited(false)
-      setCustomDuration(0)
     }
-  }, [isOpen, editMode, initialClientId, initialProcedureIds])
+  }, [isOpen, editMode, initialClientId, initialProcedureIds, initialCustomDuration])
 
   // Update custom duration when procedures change (only if not manually edited)
   useEffect(() => {

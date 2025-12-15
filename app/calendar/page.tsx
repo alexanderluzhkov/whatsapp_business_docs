@@ -43,6 +43,7 @@ export default function CalendarPage() {
     id: string
     clientId: string
     procedureIds: string[]
+    customDuration?: number // in minutes
   } | null>(null)
 
   // Fetch bookings for current week
@@ -102,13 +103,25 @@ export default function CalendarPage() {
               }
             }
 
+            // Get duration - prefer custom duration over calculated
+            let totalDuration = '0:00'
+            if (fields.Duration_Castomed) {
+              // Convert seconds to H:MM format
+              const totalSeconds = fields.Duration_Castomed
+              const hours = Math.floor(totalSeconds / 3600)
+              const minutes = Math.floor((totalSeconds % 3600) / 60)
+              totalDuration = `${hours}:${minutes.toString().padStart(2, '0')}`
+            } else if (fields.Total_Duration) {
+              totalDuration = fields.Total_Duration
+            }
+
             return {
               id: booking.id,
               clientName,
               clientPhone: fields['Phone_Number']?.[0] || 'Не указан',
               date: fields.Date,
               procedures: fields['Name (from Procedures)'] || [],
-              totalDuration: fields.Total_Duration || '0:00',
+              totalDuration,
               totalPrice: fields.Total_Price || 0,
               bookingNumber: fields.Booking_Number_New || 0,
             }
@@ -244,9 +257,15 @@ export default function CalendarPage() {
     const clientId = rawBooking.fields.Client?.[0]
     const procedureIds = rawBooking.fields.Procedures || []
 
-    if (!clientId || procedureIds.length === 0) {
-      console.error('Missing client or procedures in booking data')
+    if (!clientId) {
+      console.error('Missing client in booking data')
       return
+    }
+
+    // Extract custom duration if it exists (convert seconds to minutes)
+    let customDuration: number | undefined
+    if (rawBooking.fields.Duration_Castomed) {
+      customDuration = Math.floor(rawBooking.fields.Duration_Castomed / 60)
     }
 
     // Parse date and time from the booking
@@ -258,6 +277,7 @@ export default function CalendarPage() {
       id: selectedBooking.id,
       clientId,
       procedureIds,
+      customDuration,
     })
     setSelectedSlot({ date: bookingDate, time: timeLabel })
     setIsBookingFormOpen(true)
@@ -517,6 +537,7 @@ export default function CalendarPage() {
           bookingId={editBookingData?.id}
           initialClientId={editBookingData?.clientId}
           initialProcedureIds={editBookingData?.procedureIds}
+          initialCustomDuration={editBookingData?.customDuration}
         />
       )}
     </div>
