@@ -78,6 +78,7 @@ export interface CreateBookingData {
   Client: string[] // Array with single client record ID
   Procedures: string[] // Array of procedure record IDs
   Date: string // ISO 8601 datetime string
+  Duration_Castomed?: number // Custom duration in seconds
   Token_Used?: boolean
 }
 
@@ -85,6 +86,7 @@ export interface UpdateBookingData {
   Client?: string[]
   Procedures?: string[]
   Date?: string
+  Duration_Castomed?: number // Custom duration in seconds
   Token_Used?: boolean
 }
 

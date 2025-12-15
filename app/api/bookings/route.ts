@@ -26,7 +26,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { clientId, procedureIds, date } = body
+    const { clientId, procedureIds, date, customDuration } = body
 
     // Validate input
     if (!clientId || !procedureIds || !Array.isArray(procedureIds) || procedureIds.length === 0 || !date) {
@@ -44,6 +44,11 @@ export async function POST(request: Request) {
       Client: [clientId],
       Procedures: procedureIds,
       Date: date,
+    }
+
+    // Add custom duration if provided (in seconds)
+    if (customDuration && typeof customDuration === 'number') {
+      bookingData.Duration_Castomed = customDuration
     }
 
     // Create booking in Airtable

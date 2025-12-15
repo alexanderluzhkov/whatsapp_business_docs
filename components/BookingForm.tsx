@@ -38,6 +38,7 @@ export default function BookingForm({
   const [clientSearch, setClientSearch] = useState('')
   const [editableDate, setEditableDate] = useState('')
   const [editableTime, setEditableTime] = useState('')
+  const [customDuration, setCustomDuration] = useState<number>(0) // in minutes
 
   // UI state
   const [isLoadingData, setIsLoadingData] = useState(true)
@@ -127,20 +128,30 @@ export default function BookingForm({
     }
   }, [isOpen, editMode, initialClientId, initialProcedureIds, selectedDate, selectedTime])
 
-  // Check for conflicts when procedures change
+  // Update custom duration when procedures change
   useEffect(() => {
-    if (selectedProcedureIds.length === 0 || !editableDate || !editableTime) {
+    if (selectedProcedureIds.length > 0) {
+      const calculatedMinutes = calculateTotalMinutes()
+      // Only auto-update if custom duration is 0 or not manually changed
+      if (customDuration === 0 || customDuration === calculateTotalMinutes()) {
+        setCustomDuration(calculatedMinutes)
+      }
+    }
+  }, [selectedProcedureIds])
+
+  // Check for conflicts when procedures or custom duration change
+  useEffect(() => {
+    if (selectedProcedureIds.length === 0 || !editableDate || !editableTime || customDuration === 0) {
       setConflictWarning(null)
       return
     }
 
-    const totalMinutes = calculateTotalMinutes()
     const [hours, minutes] = editableTime.split(':').map(Number)
     const bookingStart = new Date(editableDate)
     bookingStart.setHours(hours, minutes, 0, 0)
 
     const bookingEnd = new Date(bookingStart)
-    bookingEnd.setMinutes(bookingEnd.getMinutes() + totalMinutes)
+    bookingEnd.setMinutes(bookingEnd.getMinutes() + customDuration)
 
     // Check for conflicts (exclude current booking in edit mode)
     const conflict = existingBookings.find((booking) => {
@@ -167,7 +178,7 @@ export default function BookingForm({
     } else {
       setConflictWarning(null)
     }
-  }, [selectedProcedureIds, editableDate, editableTime, existingBookings, editMode, bookingId])
+  }, [selectedProcedureIds, customDuration, editableDate, editableTime, existingBookings, editMode, bookingId])
 
   // Parse duration string (e.g., "1:30" -> 90 minutes)
   const parseDuration = (duration: string): number => {
@@ -182,6 +193,21 @@ export default function BookingForm({
     const hours = Math.floor(seconds / 3600)
     const minutes = Math.floor((seconds % 3600) / 60)
     return `${hours}:${minutes.toString().padStart(2, '0')}`
+  }
+
+  // Convert minutes to H:MM format for display
+  const formatMinutesToHHMM = (totalMinutes: number): string => {
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = totalMinutes % 60
+    return `${hours}:${minutes.toString().padStart(2, '0')}`
+  }
+
+  // Parse H:MM format to minutes
+  const parseHHMMToMinutes = (timeStr: string): number => {
+    const parts = timeStr.split(':')
+    const hours = parseInt(parts[0] || '0', 10)
+    const minutes = parseInt(parts[1] || '0', 10)
+    return hours * 60 + minutes
   }
 
   // Calculate total duration in minutes
@@ -320,6 +346,7 @@ export default function BookingForm({
             clientId: selectedClientId,
             procedureIds: selectedProcedureIds,
             date: bookingDate.toISOString(),
+            customDuration: customDuration * 60, // Convert minutes to seconds for Airtable
           }),
         })
 
@@ -339,6 +366,7 @@ export default function BookingForm({
             clientId: selectedClientId,
             procedureIds: selectedProcedureIds,
             date: bookingDate.toISOString(),
+            customDuration: customDuration * 60, // Convert minutes to seconds for Airtable
           }),
         })
 
@@ -533,20 +561,36 @@ export default function BookingForm({
                 </div>
               </div>
 
-              {/* Live Calculations */}
+              {/* Duration and Price */}
               {selectedProcedureIds.length > 0 && (
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                   <div className="grid grid-cols-2 gap-4">
+                    {/* Editable Duration */}
                     <div>
-                      <div className="text-sm text-purple-700 font-medium mb-1">
-                        Общая длительность
-                      </div>
-                      <div className="text-2xl font-bold text-purple-900">
-                        {Math.floor(totalMinutes / 60)}:{(totalMinutes % 60).toString().padStart(2, '0')}
-                      </div>
+                      <label className="block text-sm text-purple-700 font-medium mb-2">
+                        Длительность визита
+                      </label>
+                      <input
+                        type="text"
+                        value={formatMinutesToHHMM(customDuration)}
+                        onChange={(e) => {
+                          const minutes = parseHHMMToMinutes(e.target.value)
+                          if (!isNaN(minutes)) {
+                            setCustomDuration(minutes)
+                          }
+                        }}
+                        placeholder="0:00"
+                        className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none text-lg font-bold text-purple-900"
+                      />
+                      {customDuration !== totalMinutes && totalMinutes > 0 && (
+                        <div className="text-xs text-purple-600 mt-1">
+                          Рассчитано из процедур: {formatMinutesToHHMM(totalMinutes)}
+                        </div>
+                      )}
                     </div>
+                    {/* Total Price */}
                     <div>
-                      <div className="text-sm text-purple-700 font-medium mb-1">
+                      <div className="text-sm text-purple-700 font-medium mb-2">
                         Общая стоимость
                       </div>
                       <div className="text-2xl font-bold text-purple-900">

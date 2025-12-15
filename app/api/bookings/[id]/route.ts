@@ -33,7 +33,7 @@ export async function PUT(
 ) {
   try {
     const body = await request.json()
-    const { clientId, procedureIds, date } = body
+    const { clientId, procedureIds, date, customDuration } = body
 
     // Validate input
     if (!clientId || !procedureIds || !Array.isArray(procedureIds) || procedureIds.length === 0 || !date) {
@@ -51,6 +51,11 @@ export async function PUT(
       Client: [clientId],
       Procedures: procedureIds,
       Date: date,
+    }
+
+    // Add custom duration if provided (in seconds)
+    if (customDuration && typeof customDuration === 'number') {
+      updateData.Duration_Castomed = customDuration
     }
 
     // Update booking in Airtable
