@@ -34,6 +34,13 @@ export default function CalendarPage() {
   const [selectedBooking, setSelectedBooking] = useState<BookingDisplay | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
+  // Mobile: selected day index (0 = Sunday, 6 = Saturday)
+  const [selectedDayIndex, setSelectedDayIndex] = useState(() => {
+    // Initialize with today's day of week
+    const today = new Date()
+    return today.getDay()
+  })
+
   // Fetch bookings for current week
   useEffect(() => {
     const fetchBookings = async () => {
@@ -99,7 +106,7 @@ export default function CalendarPage() {
               bookingNumber: fields.Booking_Number_New || 0,
             }
           })
-          .filter((booking): booking is BookingDisplay => booking !== null)
+          .filter((booking: BookingDisplay | null): booking is BookingDisplay => booking !== null)
 
         setBookings(parsedBookings)
       } catch (err) {
@@ -115,15 +122,38 @@ export default function CalendarPage() {
 
   // Navigation handlers
   const handlePreviousWeek = () => {
-    setCurrentSunday(getPreviousWeek(currentSunday))
+    const newSunday = getPreviousWeek(currentSunday)
+    setCurrentSunday(newSunday)
+
+    // Check if today is in the new week
+    const today = new Date()
+    const newWeekDates = getWeekDates(newSunday)
+    const todayInNewWeek = newWeekDates.findIndex(date => isToday(date))
+
+    // If today is in the new week, select it; otherwise select Sunday (0)
+    setSelectedDayIndex(todayInNewWeek !== -1 ? todayInNewWeek : 0)
   }
 
   const handleNextWeek = () => {
-    setCurrentSunday(getNextWeek(currentSunday))
+    const newSunday = getNextWeek(currentSunday)
+    setCurrentSunday(newSunday)
+
+    // Check if today is in the new week
+    const today = new Date()
+    const newWeekDates = getWeekDates(newSunday)
+    const todayInNewWeek = newWeekDates.findIndex(date => isToday(date))
+
+    // If today is in the new week, select it; otherwise select Sunday (0)
+    setSelectedDayIndex(todayInNewWeek !== -1 ? todayInNewWeek : 0)
   }
 
   const handleToday = () => {
-    setCurrentSunday(getSunday(new Date()))
+    const newSunday = getSunday(new Date())
+    setCurrentSunday(newSunday)
+
+    // Select today's day of week
+    const today = new Date()
+    setSelectedDayIndex(today.getDay())
   }
 
   // Parse duration string (e.g., "1:30" -> 90 minutes)
@@ -199,8 +229,8 @@ export default function CalendarPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Календарь</h1>
+        <div className="max-w-7xl mx-auto px-4 py-3 md:py-4">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-3 md:mb-4">Календарь</h1>
 
           {/* Navigation Controls */}
           <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between">
@@ -208,15 +238,17 @@ export default function CalendarPage() {
             <div className="flex gap-2 flex-1">
               <button
                 onClick={handlePreviousWeek}
-                className="flex-1 sm:flex-none px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                className="flex-1 sm:flex-none px-3 md:px-4 py-2 bg-white border border-gray-300 rounded-lg text-xs md:text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
               >
-                ← Предыдущая неделя
+                <span className="hidden sm:inline">← Предыдущая неделя</span>
+                <span className="sm:hidden">← Пред.</span>
               </button>
               <button
                 onClick={handleNextWeek}
-                className="flex-1 sm:flex-none px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                className="flex-1 sm:flex-none px-3 md:px-4 py-2 bg-white border border-gray-300 rounded-lg text-xs md:text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
               >
-                Следующая неделя →
+                <span className="hidden sm:inline">Следующая неделя →</span>
+                <span className="sm:hidden">След. →</span>
               </button>
             </div>
 
@@ -224,7 +256,7 @@ export default function CalendarPage() {
             <button
               onClick={handleToday}
               disabled={isCurrentWeek(currentSunday)}
-              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-4 md:px-6 py-2 rounded-lg text-xs md:text-sm font-medium transition-colors ${
                 isCurrentWeek(currentSunday)
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
@@ -235,14 +267,14 @@ export default function CalendarPage() {
           </div>
 
           {/* Week Range Display */}
-          <div className="mt-3 text-sm text-gray-600">
+          <div className="mt-2 md:mt-3 text-xs md:text-sm text-gray-600">
             {formatDateLong(weekDates[0])} — {formatDateLong(weekDates[6])}
           </div>
         </div>
       </header>
 
       {/* Calendar Grid */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-2 md:px-4 py-4 md:py-6">
         {/* Loading State */}
         {isLoading && (
           <div className="text-center py-8">
@@ -344,17 +376,32 @@ export default function CalendarPage() {
           {/* Mobile View - Day Selector + Single Day Grid */}
           <div className="md:hidden">
             {/* Day Selector */}
-            <div className="overflow-x-auto border-b border-gray-200">
+            <div className="overflow-x-auto border-b-2 border-gray-200">
               <div className="flex">
                 {weekDates.map((date, index) => {
                   const today = isToday(date)
+                  const isSelected = index === selectedDayIndex
+
+                  // Count bookings for this day
+                  const dayBookingsCount = bookings.filter(b => {
+                    const bookingDate = new Date(b.date)
+                    return (
+                      bookingDate.getDate() === date.getDate() &&
+                      bookingDate.getMonth() === date.getMonth() &&
+                      bookingDate.getFullYear() === date.getFullYear()
+                    )
+                  }).length
+
                   return (
                     <button
                       key={date.toISOString()}
-                      className={`flex-1 min-w-[70px] px-3 py-3 text-center border-r border-gray-200 last:border-r-0 transition-colors ${
-                        today
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                      onClick={() => setSelectedDayIndex(index)}
+                      className={`flex-1 min-w-[75px] px-3 py-3 text-center border-r border-gray-200 last:border-r-0 transition-all relative ${
+                        isSelected
+                          ? 'bg-blue-600 text-white shadow-lg'
+                          : today
+                          ? 'bg-blue-100 text-blue-900 hover:bg-blue-200 active:bg-blue-300'
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100 active:bg-gray-200'
                       }`}
                     >
                       <div className="text-xs font-medium">
@@ -363,6 +410,19 @@ export default function CalendarPage() {
                       <div className="text-lg font-bold mt-1">
                         {date.getDate()}
                       </div>
+
+                      {/* Booking indicator dot */}
+                      {dayBookingsCount > 0 && (
+                        <div className="absolute top-1 right-1">
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+                            isSelected
+                              ? 'bg-white text-blue-600'
+                              : 'bg-purple-600 text-white'
+                          }`}>
+                            {dayBookingsCount}
+                          </div>
+                        </div>
+                      )}
                     </button>
                   )
                 })}
@@ -372,16 +432,17 @@ export default function CalendarPage() {
             {/* Single Day Time Slots */}
             <div className="divide-y divide-gray-200">
               {timeSlots.map((slot) => {
-                // For mobile, show today's bookings
-                const today = new Date()
-                const booking = findBookingForSlot(today, slot.hour, slot.minute)
+                // For mobile, show bookings for the selected day
+                const selectedDate = weekDates[selectedDayIndex]
+                const booking = findBookingForSlot(selectedDate, slot.hour, slot.minute)
+                const isOccupied = isSlotOccupiedByEarlierBooking(selectedDate, slot.hour, slot.minute)
 
                 return (
                   <div
                     key={slot.label}
                     className={`flex items-stretch transition-colors ${
-                      booking ? '' : 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
-                    }`}
+                      booking || isOccupied ? '' : 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
+                    } ${isOccupied ? 'bg-gray-50' : ''}`}
                   >
                     {/* Time Label */}
                     <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-3 py-4 text-sm font-medium text-gray-600 text-right">
@@ -389,14 +450,21 @@ export default function CalendarPage() {
                     </div>
 
                     {/* Time Slot Content */}
-                    <div className="flex-1 p-2 min-h-[60px]">
+                    <div className="flex-1 p-2 min-h-[60px] relative">
                       {booking ? (
-                        <BookingCard
-                          clientName={booking.clientName}
-                          procedures={booking.procedures}
-                          totalDuration={booking.totalDuration}
-                          onClick={() => handleBookingClick(booking)}
-                        />
+                        <div
+                          style={{
+                            minHeight: `${Math.max(60, calculateBookingHeight(booking.totalDuration))}px`,
+                          }}
+                          className="h-full"
+                        >
+                          <BookingCard
+                            clientName={booking.clientName}
+                            procedures={booking.procedures}
+                            totalDuration={booking.totalDuration}
+                            onClick={() => handleBookingClick(booking)}
+                          />
+                        </div>
                       ) : null}
                     </div>
                   </div>
@@ -407,8 +475,28 @@ export default function CalendarPage() {
         </div>
 
         {/* Empty State Message */}
-        <div className="mt-6 text-center text-gray-500 text-sm">
-          <p>Нажмите на свободный временной слот, чтобы создать запись</p>
+        <div className="mt-4 md:mt-6 text-center text-gray-500 text-xs md:text-sm px-4">
+          <p className="hidden md:block">Нажмите на свободный временной слот, чтобы создать запись</p>
+          <p className="md:hidden">
+            {weekDates[selectedDayIndex] && (
+              <>
+                {formatDateLong(weekDates[selectedDayIndex])}
+                {bookings.filter(b => {
+                  const bookingDate = new Date(b.date)
+                  const selectedDate = weekDates[selectedDayIndex]
+                  return (
+                    bookingDate.getDate() === selectedDate.getDate() &&
+                    bookingDate.getMonth() === selectedDate.getMonth() &&
+                    bookingDate.getFullYear() === selectedDate.getFullYear()
+                  )
+                }).length === 0 && (
+                  <span className="block mt-2 text-gray-400">
+                    Нет записей на этот день
+                  </span>
+                )}
+              </>
+            )}
+          </p>
         </div>
       </main>
 
