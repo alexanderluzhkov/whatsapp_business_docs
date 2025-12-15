@@ -50,7 +50,7 @@ export default function BookingForm({
   const [conflictWarning, setConflictWarning] = useState<string | null>(null)
 
   // Track previous isOpen state to detect when modal opens
-  const prevIsOpenRef = useRef(isOpen)
+  const prevIsOpenRef = useRef(false) // Initialize as false, not with current isOpen value
 
   // Close modal on ESC key
   useEffect(() => {
