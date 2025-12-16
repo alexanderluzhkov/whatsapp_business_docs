@@ -25,6 +25,13 @@ export default function CalendarPage() {
   const weekDates = getWeekDates(currentSunday)
   const timeSlots = generateTimeSlots()
 
+  // Debug: Log time slots to verify they're generated correctly
+  console.log('📅 Time slots generated:', {
+    total: timeSlots.length,
+    first: timeSlots[0]?.label,
+    last: timeSlots[timeSlots.length - 1]?.label,
+  })
+
   // Booking state
   const [bookings, setBookings] = useState<BookingDisplay[]>([])
   const [isLoading, setIsLoading] = useState(true)
