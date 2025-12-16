@@ -76,11 +76,23 @@ export async function getBookings(
 ): Promise<Booking[]> {
   let url = getTableUrl(AIRTABLE_CONFIG.tables.bookings)
 
+  // Add parameters to get all records (no view filtering)
+  const params = new URLSearchParams()
+
+  // Request more records to ensure we get everything
+  params.append('maxRecords', '1000')
+
+  // Sort by date descending to get recent bookings first
+  params.append('sort[0][field]', 'Date')
+  params.append('sort[0][direction]', 'desc')
+
   // Add date filter if provided
   if (startDate && endDate) {
     const filter = `AND(IS_AFTER({Date}, '${startDate}'), IS_BEFORE({Date}, '${endDate}'))`
-    url += `?filterByFormula=${encodeURIComponent(filter)}`
+    params.append('filterByFormula', filter)
   }
+
+  url += `?${params.toString()}`
 
   const response = await airtableFetch<AirtableResponse<BookingFields>>(url)
   return response.records
