@@ -69,6 +69,9 @@ export default function CalendarPage() {
 
         const allBookings = data.bookings
 
+        console.log('📅 Total bookings from API:', allBookings.length)
+        console.log('📅 Week range:', { weekStart, weekEnd })
+
         // Parse and filter bookings
         const parsedBookings: BookingDisplay[] = allBookings
           .map((booking: any) => {
@@ -80,6 +83,12 @@ export default function CalendarPage() {
             }
 
             const bookingDate = new Date(fields.Date)
+            console.log('📅 Checking booking:', {
+              booking: fields.Booking,
+              date: fields.Date,
+              parsed: bookingDate.toISOString(),
+              inWeek: bookingDate >= weekStart && bookingDate < weekEnd
+            })
 
             // Filter to current week only
             if (bookingDate < weekStart || bookingDate >= weekEnd) {
@@ -111,6 +120,7 @@ export default function CalendarPage() {
           })
           .filter((booking: BookingDisplay | null): booking is BookingDisplay => booking !== null)
 
+        console.log('📅 Filtered bookings for this week:', parsedBookings.length, parsedBookings)
         setBookings(parsedBookings)
       } catch (err) {
         console.error('Error fetching bookings:', err)
@@ -317,7 +327,8 @@ export default function CalendarPage() {
 
         {/* Mobile Day Selector - Sticky (outside calendar container) */}
         <div className="md:hidden">
-          <div className="sticky top-[105px] z-20 bg-white border-b-2 border-gray-200 shadow-sm relative mb-0">
+          {/* Sticky at 120px to account for mobile header height (title + nav + date range) */}
+          <div className="sticky top-[120px] z-20 bg-white border-b-2 border-gray-200 shadow-sm relative mb-0">
             {/* Left scroll indicator */}
             <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
 
