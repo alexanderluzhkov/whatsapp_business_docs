@@ -43,6 +43,24 @@ export default function CalendarPage() {
 
   // Ref for day selector scroll container
   const daySelectorRef = useRef<HTMLDivElement>(null)
+  const headerRef = useRef<HTMLElement>(null)
+  const [headerHeight, setHeaderHeight] = useState(140)
+
+  // Measure header height on mount and resize
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      if (headerRef.current) {
+        const height = headerRef.current.offsetHeight
+        setHeaderHeight(height)
+        console.log('📏 Header height:', height)
+      }
+    }
+
+    updateHeaderHeight()
+    window.addEventListener('resize', updateHeaderHeight)
+
+    return () => window.removeEventListener('resize', updateHeaderHeight)
+  }, [])
 
   // Fetch bookings for current week
   useEffect(() => {
@@ -263,7 +281,7 @@ export default function CalendarPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-30">
+      <header ref={headerRef} className="bg-white shadow-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-3 md:py-4">
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-3 md:mb-4">Календарь</h1>
 
@@ -327,8 +345,11 @@ export default function CalendarPage() {
 
         {/* Mobile Day Selector - Sticky (outside calendar container) */}
         <div className="md:hidden">
-          {/* Sticky at 140px to account for mobile header height (adjusted for better positioning) */}
-          <div className="sticky top-[140px] z-20 bg-white border-b-2 border-gray-200 shadow-sm relative mb-0">
+          {/* Sticky with dynamically calculated header height */}
+          <div
+            className="sticky z-20 bg-white border-b-2 border-gray-200 shadow-sm relative mb-0"
+            style={{ top: `${headerHeight}px` }}
+          >
             {/* Left scroll indicator */}
             <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
 
