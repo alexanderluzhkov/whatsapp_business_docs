@@ -327,8 +327,8 @@ export default function CalendarPage() {
 
         {/* Mobile Day Selector - Sticky (outside calendar container) */}
         <div className="md:hidden">
-          {/* Sticky at 120px to account for mobile header height (title + nav + date range) */}
-          <div className="sticky top-[120px] z-20 bg-white border-b-2 border-gray-200 shadow-sm relative mb-0">
+          {/* Sticky at 140px to account for mobile header height (adjusted for better positioning) */}
+          <div className="sticky top-[140px] z-20 bg-white border-b-2 border-gray-200 shadow-sm relative mb-0">
             {/* Left scroll indicator */}
             <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
 
