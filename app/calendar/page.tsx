@@ -344,73 +344,116 @@ export default function CalendarPage() {
         )}
 
         {/* Mobile Day Selector - Sticky (outside calendar container) */}
-        <div className="md:hidden">
-          {/* Sticky with dynamically calculated header height */}
-          <div
-            className="sticky z-20 bg-white border-b-2 border-gray-200 shadow-sm relative mb-0"
-            style={{ top: `${headerHeight}px` }}
-          >
-            {/* Left scroll indicator */}
-            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
+        <div className="md:hidden bg-white rounded-lg shadow-sm overflow-hidden">
+          {/* Scrollable mobile calendar container with fixed height */}
+          <div className="h-[calc(100vh-180px)] overflow-y-auto">
+            {/* Day Selector - Sticky at top of scrollable container */}
+            <div className="sticky top-0 z-20 bg-white border-b-2 border-gray-200 shadow-sm relative">
+              {/* Left scroll indicator */}
+              <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
 
-            {/* Right scroll indicator */}
-            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none z-10"></div>
+              {/* Right scroll indicator */}
+              <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none z-10"></div>
 
-            {/* Scrollable day selector */}
-            <div
-              ref={daySelectorRef}
-              className="overflow-x-auto scrollbar-hide"
-            >
-              <div className="flex">
-                {weekDates.map((date, index) => {
-                  const today = isToday(date)
-                  const isSelected = index === selectedDayIndex
+              {/* Scrollable day selector */}
+              <div
+                ref={daySelectorRef}
+                className="overflow-x-auto scrollbar-hide"
+              >
+                <div className="flex">
+                  {weekDates.map((date, index) => {
+                    const today = isToday(date)
+                    const isSelected = index === selectedDayIndex
 
-                  // Count bookings for this day
-                  const dayBookingsCount = bookings.filter(b => {
-                    const bookingDate = new Date(b.date)
+                    // Count bookings for this day
+                    const dayBookingsCount = bookings.filter(b => {
+                      const bookingDate = new Date(b.date)
+                      return (
+                        bookingDate.getDate() === date.getDate() &&
+                        bookingDate.getMonth() === date.getMonth() &&
+                        bookingDate.getFullYear() === date.getFullYear()
+                      )
+                    }).length
+
                     return (
-                      bookingDate.getDate() === date.getDate() &&
-                      bookingDate.getMonth() === date.getMonth() &&
-                      bookingDate.getFullYear() === date.getFullYear()
-                    )
-                  }).length
-
-                  return (
-                    <button
-                      key={date.toISOString()}
-                      onClick={() => setSelectedDayIndex(index)}
-                      className={`flex-1 min-w-[75px] px-3 py-3 text-center border-r border-gray-200 last:border-r-0 transition-all relative ${
-                        isSelected
-                          ? 'bg-blue-600 text-white shadow-lg'
-                          : today
-                          ? 'bg-blue-100 text-blue-900 hover:bg-blue-200 active:bg-blue-300'
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100 active:bg-gray-200'
-                      }`}
-                    >
-                      <div className="text-xs font-medium">
-                        {DAYS_OF_WEEK_RU[index]}
-                      </div>
-                      <div className="text-lg font-bold mt-1">
-                        {date.getDate()}
-                      </div>
-
-                      {/* Booking indicator dot */}
-                      {dayBookingsCount > 0 && (
-                        <div className="absolute top-1 right-1">
-                          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                            isSelected
-                              ? 'bg-white text-blue-600'
-                              : 'bg-purple-600 text-white'
-                          }`}>
-                            {dayBookingsCount}
-                          </div>
+                      <button
+                        key={date.toISOString()}
+                        onClick={() => setSelectedDayIndex(index)}
+                        className={`flex-1 min-w-[75px] px-3 py-3 text-center border-r border-gray-200 last:border-r-0 transition-all relative ${
+                          isSelected
+                            ? 'bg-blue-600 text-white shadow-lg'
+                            : today
+                            ? 'bg-blue-100 text-blue-900 hover:bg-blue-200 active:bg-blue-300'
+                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100 active:bg-gray-200'
+                        }`}
+                      >
+                        <div className="text-xs font-medium">
+                          {DAYS_OF_WEEK_RU[index]}
                         </div>
-                      )}
-                    </button>
-                  )
-                })}
+                        <div className="text-lg font-bold mt-1">
+                          {date.getDate()}
+                        </div>
+
+                        {/* Booking indicator dot */}
+                        {dayBookingsCount > 0 && (
+                          <div className="absolute top-1 right-1">
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+                              isSelected
+                                ? 'bg-white text-blue-600'
+                                : 'bg-purple-600 text-white'
+                            }`}>
+                              {dayBookingsCount}
+                            </div>
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
+            </div>
+
+            {/* Single Day Time Slots */}
+            <div className="divide-y divide-gray-200">
+              {timeSlots.map((slot) => {
+                // For mobile, show bookings for the selected day
+                const selectedDate = weekDates[selectedDayIndex]
+                const booking = findBookingForSlot(selectedDate, slot.hour, slot.minute)
+                const isOccupied = isSlotOccupiedByEarlierBooking(selectedDate, slot.hour, slot.minute)
+
+                return (
+                  <div
+                    key={slot.label}
+                    className={`flex items-stretch transition-colors ${
+                      booking || isOccupied ? '' : 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
+                    } ${isOccupied ? 'bg-gray-50' : ''}`}
+                  >
+                    {/* Time Label */}
+                    <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-3 py-4 text-sm font-medium text-gray-600 text-right">
+                      {slot.label}
+                    </div>
+
+                    {/* Time Slot Content */}
+                    <div className="flex-1 p-2 min-h-[60px] relative">
+                      {booking ? (
+                        <div
+                          style={{
+                            minHeight: `${Math.max(60, calculateBookingHeight(booking.totalDuration))}px`,
+                          }}
+                          className="h-full"
+                        >
+                          <BookingCard
+                            clientName={booking.clientName}
+                            procedures={booking.procedures}
+                            totalDuration={booking.totalDuration}
+                            onClick={() => handleBookingClick(booking)}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
@@ -495,52 +538,6 @@ export default function CalendarPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
-          </div>
-
-          {/* Mobile View - Single Day Time Slots */}
-          <div className="md:hidden">
-            {/* Single Day Time Slots */}
-            <div className="divide-y divide-gray-200">
-              {timeSlots.map((slot) => {
-                // For mobile, show bookings for the selected day
-                const selectedDate = weekDates[selectedDayIndex]
-                const booking = findBookingForSlot(selectedDate, slot.hour, slot.minute)
-                const isOccupied = isSlotOccupiedByEarlierBooking(selectedDate, slot.hour, slot.minute)
-
-                return (
-                  <div
-                    key={slot.label}
-                    className={`flex items-stretch transition-colors ${
-                      booking || isOccupied ? '' : 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
-                    } ${isOccupied ? 'bg-gray-50' : ''}`}
-                  >
-                    {/* Time Label */}
-                    <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-3 py-4 text-sm font-medium text-gray-600 text-right">
-                      {slot.label}
-                    </div>
-
-                    {/* Time Slot Content */}
-                    <div className="flex-1 p-2 min-h-[60px] relative">
-                      {booking ? (
-                        <div
-                          style={{
-                            minHeight: `${Math.max(60, calculateBookingHeight(booking.totalDuration))}px`,
-                          }}
-                          className="h-full"
-                        >
-                          <BookingCard
-                            clientName={booking.clientName}
-                            procedures={booking.procedures}
-                            totalDuration={booking.totalDuration}
-                            onClick={() => handleBookingClick(booking)}
-                          />
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                )
-              })}
             </div>
           </div>
         </div>
