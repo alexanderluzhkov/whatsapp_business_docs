@@ -315,6 +315,74 @@ export default function CalendarPage() {
           </div>
         )}
 
+        {/* Mobile Day Selector - Sticky (outside calendar container) */}
+        <div className="md:hidden">
+          <div className="sticky top-[105px] z-20 bg-white border-b-2 border-gray-200 shadow-sm relative mb-0">
+            {/* Left scroll indicator */}
+            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
+
+            {/* Right scroll indicator */}
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none z-10"></div>
+
+            {/* Scrollable day selector */}
+            <div
+              ref={daySelectorRef}
+              className="overflow-x-auto scrollbar-hide"
+            >
+              <div className="flex">
+                {weekDates.map((date, index) => {
+                  const today = isToday(date)
+                  const isSelected = index === selectedDayIndex
+
+                  // Count bookings for this day
+                  const dayBookingsCount = bookings.filter(b => {
+                    const bookingDate = new Date(b.date)
+                    return (
+                      bookingDate.getDate() === date.getDate() &&
+                      bookingDate.getMonth() === date.getMonth() &&
+                      bookingDate.getFullYear() === date.getFullYear()
+                    )
+                  }).length
+
+                  return (
+                    <button
+                      key={date.toISOString()}
+                      onClick={() => setSelectedDayIndex(index)}
+                      className={`flex-1 min-w-[75px] px-3 py-3 text-center border-r border-gray-200 last:border-r-0 transition-all relative ${
+                        isSelected
+                          ? 'bg-blue-600 text-white shadow-lg'
+                          : today
+                          ? 'bg-blue-100 text-blue-900 hover:bg-blue-200 active:bg-blue-300'
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100 active:bg-gray-200'
+                      }`}
+                    >
+                      <div className="text-xs font-medium">
+                        {DAYS_OF_WEEK_RU[index]}
+                      </div>
+                      <div className="text-lg font-bold mt-1">
+                        {date.getDate()}
+                      </div>
+
+                      {/* Booking indicator dot */}
+                      {dayBookingsCount > 0 && (
+                        <div className="absolute top-1 right-1">
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+                            isSelected
+                              ? 'bg-white text-blue-600'
+                              : 'bg-purple-600 text-white'
+                          }`}>
+                            {dayBookingsCount}
+                          </div>
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           {/* Desktop View */}
           <div className="hidden md:block">
@@ -398,74 +466,8 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          {/* Mobile View - Day Selector + Single Day Grid */}
+          {/* Mobile View - Single Day Time Slots */}
           <div className="md:hidden">
-            {/* Day Selector - Sticky with Scroll Indicators */}
-            <div className="sticky top-[140px] z-20 bg-white border-b-2 border-gray-200 shadow-sm relative">
-              {/* Left scroll indicator */}
-              <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
-
-              {/* Right scroll indicator */}
-              <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none z-10"></div>
-
-              {/* Scrollable day selector */}
-              <div
-                ref={daySelectorRef}
-                className="overflow-x-auto scrollbar-hide"
-              >
-                <div className="flex">
-                {weekDates.map((date, index) => {
-                  const today = isToday(date)
-                  const isSelected = index === selectedDayIndex
-
-                  // Count bookings for this day
-                  const dayBookingsCount = bookings.filter(b => {
-                    const bookingDate = new Date(b.date)
-                    return (
-                      bookingDate.getDate() === date.getDate() &&
-                      bookingDate.getMonth() === date.getMonth() &&
-                      bookingDate.getFullYear() === date.getFullYear()
-                    )
-                  }).length
-
-                  return (
-                    <button
-                      key={date.toISOString()}
-                      onClick={() => setSelectedDayIndex(index)}
-                      className={`flex-1 min-w-[75px] px-3 py-3 text-center border-r border-gray-200 last:border-r-0 transition-all relative ${
-                        isSelected
-                          ? 'bg-blue-600 text-white shadow-lg'
-                          : today
-                          ? 'bg-blue-100 text-blue-900 hover:bg-blue-200 active:bg-blue-300'
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100 active:bg-gray-200'
-                      }`}
-                    >
-                      <div className="text-xs font-medium">
-                        {DAYS_OF_WEEK_RU[index]}
-                      </div>
-                      <div className="text-lg font-bold mt-1">
-                        {date.getDate()}
-                      </div>
-
-                      {/* Booking indicator dot */}
-                      {dayBookingsCount > 0 && (
-                        <div className="absolute top-1 right-1">
-                          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                            isSelected
-                              ? 'bg-white text-blue-600'
-                              : 'bg-purple-600 text-white'
-                          }`}>
-                            {dayBookingsCount}
-                          </div>
-                        </div>
-                      )}
-                    </button>
-                  )
-                })}
-                </div>
-              </div>
-            </div>
-
             {/* Single Day Time Slots */}
             <div className="divide-y divide-gray-200">
               {timeSlots.map((slot) => {
