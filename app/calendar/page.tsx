@@ -125,8 +125,16 @@ export default function CalendarPage() {
               }
             }
 
-            // Use Duration_Customed if available (nail master edited), otherwise use Total_Duration
-            const duration = fields.Duration_Customed || fields.Total_Duration || '0:00'
+            // Use Duration_Castomed if available (nail master edited), otherwise use Total_Duration
+            // Duration_Castomed is in seconds (number), Total_Duration is in "H:MM" format (string)
+            let duration = fields.Total_Duration || '0:00'
+            if (fields.Duration_Castomed) {
+              // Convert seconds to "H:MM" format
+              const totalMinutes = Math.floor(fields.Duration_Castomed / 60)
+              const hours = Math.floor(totalMinutes / 60)
+              const minutes = totalMinutes % 60
+              duration = `${hours}:${minutes.toString().padStart(2, '0')}`
+            }
 
             return {
               id: booking.id,
