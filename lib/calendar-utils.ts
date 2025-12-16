@@ -18,8 +18,8 @@ export const DAYS_OF_WEEK_FULL_RU = [
 ]
 
 export const WORKING_HOURS = {
-  start: 9,
-  end: 20,
+  start: 8,
+  end: 21,
 }
 
 export const SLOT_DURATION_MINUTES = 30

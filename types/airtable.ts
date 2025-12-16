@@ -96,9 +96,11 @@ export interface BookingFromAirtable {
     'Name (from Client)'?: string[] // Array with client names from lookup
     'Name (from Procedures)'?: string[] // Array with procedure names from lookup
     Total_Duration?: string // "1:30" format
+    Duration_Customed?: string // "1:30" format - custom duration set by nail master
     Total_Price?: number
     Phone_Number?: string[] // Lookup field from Client table
     Booking_Number_New?: number
+    Booking?: string // Full booking text
   }
 }
 

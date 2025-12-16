@@ -125,13 +125,16 @@ export default function CalendarPage() {
               }
             }
 
+            // Use Duration_Customed if available (nail master edited), otherwise use Total_Duration
+            const duration = fields.Duration_Customed || fields.Total_Duration || '0:00'
+
             return {
               id: booking.id,
               clientName,
               clientPhone: fields['Phone_Number']?.[0] || 'Не указан',
               date: fields.Date,
               procedures: fields['Name (from Procedures)'] || [],
-              totalDuration: fields.Total_Duration || '0:00',
+              totalDuration: duration,
               totalPrice: fields.Total_Price || 0,
               bookingNumber: fields.Booking_Number_New || 0,
             }
