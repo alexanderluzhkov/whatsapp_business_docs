@@ -424,9 +424,10 @@ export default function CalendarPage() {
                 return (
                   <div
                     key={slot.label}
-                    className={`flex items-stretch transition-colors ${
+                    className={`flex items-stretch transition-colors relative ${
                       booking || isOccupied ? '' : 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
                     } ${isOccupied ? 'bg-gray-50' : ''}`}
+                    style={{ minHeight: '60px' }}
                   >
                     {/* Time Label */}
                     <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-3 py-4 text-sm font-medium text-gray-600 text-right">
@@ -434,13 +435,13 @@ export default function CalendarPage() {
                     </div>
 
                     {/* Time Slot Content */}
-                    <div className="flex-1 p-2 min-h-[60px] relative">
-                      {booking ? (
+                    <div className="flex-1 p-2 relative">
+                      {booking && !isOccupied ? (
                         <div
                           style={{
-                            minHeight: `${Math.max(60, calculateBookingHeight(booking.totalDuration))}px`,
+                            height: `${calculateBookingHeight(booking.totalDuration)}px`,
                           }}
-                          className="h-full"
+                          className="absolute top-2 left-2 right-2 z-10"
                         >
                           <BookingCard
                             clientName={booking.clientName}
