@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   getSunday,
   getWeekDates,
@@ -51,6 +51,9 @@ export default function CalendarPage() {
     const today = new Date()
     return today.getDay()
   })
+
+  // Ref for day selector scroll container
+  const daySelectorRef = useRef<HTMLDivElement>(null)
 
   // Fetch bookings for current week
   const fetchBookings = useCallback(async () => {
@@ -448,9 +451,20 @@ export default function CalendarPage() {
 
           {/* Mobile View - Day Selector + Single Day Grid */}
           <div className="md:hidden">
-            {/* Day Selector */}
-            <div className="overflow-x-auto border-b border-gray-200">
-              <div className="flex">
+            {/* Day Selector - Sticky with Scroll Indicators */}
+            <div className="sticky top-[140px] z-20 bg-white border-b-2 border-gray-200 shadow-sm relative">
+              {/* Left scroll indicator */}
+              <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
+
+              {/* Right scroll indicator */}
+              <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none z-10"></div>
+
+              {/* Scrollable day selector */}
+              <div
+                ref={daySelectorRef}
+                className="overflow-x-auto scrollbar-hide"
+              >
+                <div className="flex">
                 {weekDates.map((date, index) => {
                   const today = isToday(date)
                   const isSelected = index === selectedDayIndex
@@ -459,12 +473,12 @@ export default function CalendarPage() {
                     <button
                       key={date.toISOString()}
                       onClick={() => setSelectedDayIndex(index)}
-                      className={`relative flex-1 min-w-[70px] px-3 py-3 text-center border-r border-gray-200 last:border-r-0 transition-colors ${
+                      className={`relative flex-1 min-w-[75px] px-3 py-3 text-center border-r border-gray-200 last:border-r-0 transition-all ${
                         isSelected
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-blue-600 text-white shadow-lg'
                           : today
-                          ? 'bg-blue-50 text-blue-600'
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                          ? 'bg-blue-100 text-blue-900 hover:bg-blue-200 active:bg-blue-300'
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100 active:bg-gray-200'
                       }`}
                     >
                       <div className="text-xs font-medium">
@@ -486,7 +500,8 @@ export default function CalendarPage() {
                       )}
                     </button>
                   )
-                })}
+                  })}
+                </div>
               </div>
             </div>
 
@@ -496,14 +511,15 @@ export default function CalendarPage() {
                 // For mobile, show selected day's bookings
                 const selectedDate = weekDates[selectedDayIndex]
                 const booking = findBookingForSlot(selectedDate, slot.hour, slot.minute)
+                const isOccupied = isSlotOccupiedByEarlierBooking(selectedDate, slot.hour, slot.minute)
 
                 return (
                   <div
                     key={slot.label}
                     className={`flex items-stretch transition-colors ${
-                      booking ? '' : 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
-                    }`}
-                    onClick={() => !booking && handleSlotClick(selectedDate, slot.hour, slot.minute)}
+                      booking || isOccupied ? '' : 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
+                    } ${isOccupied ? 'bg-gray-50' : ''}`}
+                    onClick={() => !booking && !isOccupied && handleSlotClick(selectedDate, slot.hour, slot.minute)}
                   >
                     {/* Time Label */}
                     <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-3 py-4 text-sm font-medium text-gray-600 text-right">
@@ -511,18 +527,13 @@ export default function CalendarPage() {
                     </div>
 
                     {/* Time Slot Content */}
-                    <div
-                      className="flex-1 p-2 min-h-[60px] relative"
-                      style={booking ? {
-                        minHeight: `${Math.max(60, calculateBookingHeight(booking.totalDuration) + 16)}px`
-                      } : undefined}
-                    >
+                    <div className="flex-1 p-2 min-h-[60px] relative">
                       {booking ? (
                         <div
-                          className="absolute top-2 left-2 right-2"
                           style={{
-                            height: `${calculateBookingHeight(booking.totalDuration)}px`,
+                            minHeight: `${Math.max(60, calculateBookingHeight(booking.totalDuration))}px`,
                           }}
+                          className="h-full"
                         >
                           <BookingCard
                             clientName={booking.clientName}
