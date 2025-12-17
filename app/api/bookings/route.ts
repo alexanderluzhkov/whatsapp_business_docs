@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { getBookings } from '@/lib/airtable/client'
+import { getBookings, createBooking } from '@/lib/airtable/client'
+import type { CreateBookingData } from '@/types/airtable'
 
 export async function GET(request: Request) {
   try {
@@ -16,6 +17,53 @@ export async function GET(request: Request) {
       {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch bookings',
+      },
+      { status: 500 }
+    )
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json()
+    const { clientId, procedureIds, date, customDuration } = body
+
+    // Validate input
+    if (!clientId || !procedureIds || !Array.isArray(procedureIds) || procedureIds.length === 0 || !date) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Отсутствуют обязательные поля: clientId, procedureIds, date',
+        },
+        { status: 400 }
+      )
+    }
+
+    // Create booking data for Airtable
+    const bookingData: CreateBookingData = {
+      Client: [clientId],
+      Procedures: procedureIds,
+      Date: date,
+    }
+
+    // Add custom duration if provided (in seconds)
+    if (customDuration && typeof customDuration === 'number') {
+      bookingData.Duration_Castomed = customDuration
+    }
+
+    // Create booking in Airtable
+    const booking = await createBooking(bookingData)
+
+    return NextResponse.json({
+      success: true,
+      booking,
+    })
+  } catch (error) {
+    console.error('Error creating booking:', error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Не удалось создать запись',
       },
       { status: 500 }
     )

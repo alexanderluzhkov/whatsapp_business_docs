@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   getSunday,
   getWeekDates,
@@ -16,6 +16,7 @@ import {
 import type { BookingFromAirtable, BookingDisplay } from '@/types/airtable'
 import BookingCard from '@/components/BookingCard'
 import BookingDetailsModal from '@/components/BookingDetailsModal'
+import BookingForm from '@/components/BookingForm'
 
 export default function CalendarPage() {
   // State for current week (Sunday - Israel timezone)
@@ -34,9 +35,18 @@ export default function CalendarPage() {
   const [selectedBooking, setSelectedBooking] = useState<BookingDisplay | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
+  // Booking form state
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [formDate, setFormDate] = useState<Date>(new Date())
+  const [formTime, setFormTime] = useState<string>('9:00')
+  const [formEditMode, setFormEditMode] = useState(false)
+  const [formBookingId, setFormBookingId] = useState<string>('')
+  const [formClientId, setFormClientId] = useState<string>('')
+  const [formProcedureIds, setFormProcedureIds] = useState<string[]>([])
+  const [formCustomDuration, setFormCustomDuration] = useState<number>(0)
+
   // Fetch bookings for current week
-  useEffect(() => {
-    const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
       setIsLoading(true)
       setError(null)
 
@@ -108,10 +118,12 @@ export default function CalendarPage() {
       } finally {
         setIsLoading(false)
       }
-    }
-
-    fetchBookings()
   }, [currentSunday])
+
+  // Trigger fetch on mount and when week changes
+  useEffect(() => {
+    fetchBookings()
+  }, [fetchBookings])
 
   // Navigation handlers
   const handlePreviousWeek = () => {
@@ -193,6 +205,79 @@ export default function CalendarPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false)
     setSelectedBooking(null)
+  }
+
+  // Handle empty slot click (create mode)
+  const handleSlotClick = (date: Date, hour: number, minute: number) => {
+    const slotDate = new Date(date)
+    slotDate.setHours(hour, minute, 0, 0)
+    setFormDate(slotDate)
+    setFormTime(`${hour}:${minute.toString().padStart(2, '0')}`)
+    setFormEditMode(false)
+    setFormBookingId('')
+    setFormClientId('')
+    setFormProcedureIds([])
+    setFormCustomDuration(0)
+    setIsFormOpen(true)
+  }
+
+  // Handle edit booking
+  const handleEditBooking = async () => {
+    if (!selectedBooking) return
+
+    try {
+      // Fetch full booking details including Client and Procedures link fields
+      const response = await fetch(`/api/bookings/${selectedBooking.id}`)
+      const data = await response.json()
+
+      if (!data.success || !data.booking) {
+        throw new Error('Failed to fetch booking details')
+      }
+
+      const booking = data.booking
+      const fields = booking.fields
+
+      // Parse date/time from booking
+      const bookingDate = new Date(selectedBooking.date)
+      const hours = bookingDate.getHours()
+      const minutes = bookingDate.getMinutes()
+
+      // Parse custom duration if it exists
+      const customDurationSeconds = fields.Duration_Castomed || 0
+      const customDurationMinutes = customDurationSeconds > 0 ? Math.floor(customDurationSeconds / 60) : 0
+
+      // Get Client and Procedures IDs
+      const clientId = fields.Client?.[0] || ''
+      const procedureIds = fields.Procedures || []
+
+      // Set form state for edit mode
+      setFormDate(bookingDate)
+      setFormTime(`${hours}:${minutes.toString().padStart(2, '0')}`)
+      setFormEditMode(true)
+      setFormBookingId(selectedBooking.id)
+      setFormClientId(clientId)
+      setFormProcedureIds(procedureIds)
+      setFormCustomDuration(customDurationMinutes)
+
+      // Close details modal and open form
+      setIsModalOpen(false)
+      setIsFormOpen(true)
+    } catch (error) {
+      console.error('Error loading booking for edit:', error)
+      alert('Не удалось загрузить данные записи')
+    }
+  }
+
+  // Handle form close
+  const handleFormClose = () => {
+    setIsFormOpen(false)
+    setFormEditMode(false)
+  }
+
+  // Handle booking created/updated
+  const handleBookingCreated = async () => {
+    // Refresh bookings
+    await fetchBookings()
   }
 
   return (
@@ -315,6 +400,7 @@ export default function CalendarPage() {
                             } ${today ? 'bg-blue-25' : 'bg-white'} ${
                               isOccupied ? 'bg-gray-100' : ''
                             }`}
+                            onClick={() => !booking && !isOccupied && handleSlotClick(date, slot.hour, slot.minute)}
                           >
                             {booking ? (
                               <div
@@ -382,6 +468,7 @@ export default function CalendarPage() {
                     className={`flex items-stretch transition-colors ${
                       booking ? '' : 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
                     }`}
+                    onClick={() => !booking && handleSlotClick(today, slot.hour, slot.minute)}
                   >
                     {/* Time Label */}
                     <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-3 py-4 text-sm font-medium text-gray-600 text-right">
@@ -419,6 +506,7 @@ export default function CalendarPage() {
         booking={
           selectedBooking
             ? {
+                id: selectedBooking.id,
                 clientName: selectedBooking.clientName,
                 clientPhone: selectedBooking.clientPhone,
                 date: selectedBooking.date,
@@ -428,6 +516,22 @@ export default function CalendarPage() {
               }
             : null
         }
+        onEdit={handleEditBooking}
+      />
+
+      {/* Booking Form Modal */}
+      <BookingForm
+        isOpen={isFormOpen}
+        onClose={handleFormClose}
+        selectedDate={formDate}
+        selectedTime={formTime}
+        onBookingCreated={handleBookingCreated}
+        existingBookings={bookings}
+        editMode={formEditMode}
+        bookingId={formBookingId}
+        initialClientId={formClientId}
+        initialProcedureIds={formProcedureIds}
+        initialCustomDuration={formCustomDuration}
       />
     </div>
   )
