@@ -45,6 +45,13 @@ export default function CalendarPage() {
   const [formProcedureIds, setFormProcedureIds] = useState<string[]>([])
   const [formCustomDuration, setFormCustomDuration] = useState<number>(0)
 
+  // Mobile: selected day index (0-6, 0=Sunday)
+  const [selectedDayIndex, setSelectedDayIndex] = useState(() => {
+    // Initialize with today's day of week
+    const today = new Date()
+    return today.getDay()
+  })
+
   // Fetch bookings for current week
   const fetchBookings = useCallback(async () => {
       setIsLoading(true)
@@ -193,6 +200,18 @@ export default function CalendarPage() {
         currentSlotMinutes < bookingEndMinutes
       )
     })
+  }
+
+  // Count bookings for a specific date
+  const countBookingsForDate = (date: Date): number => {
+    return bookings.filter((booking) => {
+      const bookingDate = new Date(booking.date)
+      return (
+        bookingDate.getFullYear() === date.getFullYear() &&
+        bookingDate.getMonth() === date.getMonth() &&
+        bookingDate.getDate() === date.getDate()
+      )
+    }).length
   }
 
   // Handle booking click
@@ -434,12 +453,17 @@ export default function CalendarPage() {
               <div className="flex">
                 {weekDates.map((date, index) => {
                   const today = isToday(date)
+                  const isSelected = index === selectedDayIndex
+                  const bookingCount = countBookingsForDate(date)
                   return (
                     <button
                       key={date.toISOString()}
-                      className={`flex-1 min-w-[70px] px-3 py-3 text-center border-r border-gray-200 last:border-r-0 transition-colors ${
-                        today
+                      onClick={() => setSelectedDayIndex(index)}
+                      className={`relative flex-1 min-w-[70px] px-3 py-3 text-center border-r border-gray-200 last:border-r-0 transition-colors ${
+                        isSelected
                           ? 'bg-blue-600 text-white'
+                          : today
+                          ? 'bg-blue-50 text-blue-600'
                           : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                       }`}
                     >
@@ -449,6 +473,17 @@ export default function CalendarPage() {
                       <div className="text-lg font-bold mt-1">
                         {date.getDate()}
                       </div>
+                      {bookingCount > 0 && (
+                        <div
+                          className={`absolute top-1 right-1 min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold flex items-center justify-center ${
+                            isSelected
+                              ? 'bg-white text-blue-600'
+                              : 'bg-purple-600 text-white'
+                          }`}
+                        >
+                          {bookingCount}
+                        </div>
+                      )}
                     </button>
                   )
                 })}
@@ -458,9 +493,9 @@ export default function CalendarPage() {
             {/* Single Day Time Slots */}
             <div className="divide-y divide-gray-200">
               {timeSlots.map((slot) => {
-                // For mobile, show today's bookings
-                const today = new Date()
-                const booking = findBookingForSlot(today, slot.hour, slot.minute)
+                // For mobile, show selected day's bookings
+                const selectedDate = weekDates[selectedDayIndex]
+                const booking = findBookingForSlot(selectedDate, slot.hour, slot.minute)
 
                 return (
                   <div
@@ -468,7 +503,7 @@ export default function CalendarPage() {
                     className={`flex items-stretch transition-colors ${
                       booking ? '' : 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
                     }`}
-                    onClick={() => !booking && handleSlotClick(today, slot.hour, slot.minute)}
+                    onClick={() => !booking && handleSlotClick(selectedDate, slot.hour, slot.minute)}
                   >
                     {/* Time Label */}
                     <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-3 py-4 text-sm font-medium text-gray-600 text-right">
@@ -476,14 +511,26 @@ export default function CalendarPage() {
                     </div>
 
                     {/* Time Slot Content */}
-                    <div className="flex-1 p-2 min-h-[60px]">
+                    <div
+                      className="flex-1 p-2 min-h-[60px] relative"
+                      style={booking ? {
+                        minHeight: `${Math.max(60, calculateBookingHeight(booking.totalDuration) + 16)}px`
+                      } : undefined}
+                    >
                       {booking ? (
-                        <BookingCard
-                          clientName={booking.clientName}
-                          procedures={booking.procedures}
-                          totalDuration={booking.totalDuration}
-                          onClick={() => handleBookingClick(booking)}
-                        />
+                        <div
+                          className="absolute top-2 left-2 right-2"
+                          style={{
+                            height: `${calculateBookingHeight(booking.totalDuration)}px`,
+                          }}
+                        >
+                          <BookingCard
+                            clientName={booking.clientName}
+                            procedures={booking.procedures}
+                            totalDuration={booking.totalDuration}
+                            onClick={() => handleBookingClick(booking)}
+                          />
+                        </div>
                       ) : null}
                     </div>
                   </div>
