@@ -451,20 +451,21 @@ export default function CalendarPage() {
 
           {/* Mobile View - Day Selector + Single Day Grid */}
           <div className="md:hidden">
-            {/* Day Selector - Sticky with Scroll Indicators */}
-            <div className="sticky top-[140px] z-20 bg-white border-b-2 border-gray-200 shadow-sm relative">
-              {/* Left scroll indicator */}
-              <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
+            {/* Day Selector - Sticky */}
+            <div className="sticky top-0 md:top-[140px] z-20 bg-white border-b-2 border-gray-200 shadow-sm">
+              <div className="relative">
+                {/* Left scroll indicator */}
+                <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
 
-              {/* Right scroll indicator */}
-              <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none z-10"></div>
+                {/* Right scroll indicator */}
+                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none z-10"></div>
 
-              {/* Scrollable day selector */}
-              <div
-                ref={daySelectorRef}
-                className="overflow-x-auto scrollbar-hide"
-              >
-                <div className="flex">
+                {/* Scrollable day selector */}
+                <div
+                  ref={daySelectorRef}
+                  className="overflow-x-auto scrollbar-hide"
+                >
+                  <div className="flex">
                 {weekDates.map((date, index) => {
                   const today = isToday(date)
                   const isSelected = index === selectedDayIndex
@@ -500,10 +501,11 @@ export default function CalendarPage() {
                       )}
                     </button>
                   )
-                  })}
+                    })}
                 </div>
               </div>
             </div>
+          </div>
 
             {/* Single Day Time Slots */}
             <div className="divide-y divide-gray-200">
@@ -544,8 +546,8 @@ export default function CalendarPage() {
                 )
               })}
             </div>
-          </div>
-        </div>
+          </div>  {/* End md:hidden */}
+        </div>  {/* End bg-white rounded-lg */}
 
         {/* Empty State Message */}
         <div className="mt-6 text-center text-gray-500 text-sm">
