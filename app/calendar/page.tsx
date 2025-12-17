@@ -11,6 +11,7 @@ import {
   generateTimeSlots,
   getPreviousWeek,
   getNextWeek,
+  isSameDay,
   DAYS_OF_WEEK_RU,
 } from '@/lib/calendar-utils'
 import type { BookingFromAirtable, BookingDisplay } from '@/types/airtable'
@@ -312,11 +313,10 @@ export default function CalendarPage() {
             <button
               onClick={handleToday}
               disabled={isCurrentWeek(currentSunday)}
-              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isCurrentWeek(currentSunday)
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
-              }`}
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${isCurrentWeek(currentSunday)
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                }`}
             >
               Сегодня
             </button>
@@ -362,20 +362,30 @@ export default function CalendarPage() {
                       return (
                         <th
                           key={date.toISOString()}
-                          className={`border-b-2 border-gray-200 px-2 py-3 text-center min-w-[120px] ${
-                            today ? 'bg-blue-50' : 'bg-gray-50'
-                          }`}
+                          className={`border-b-2 border-gray-200 px-2 py-3 text-center min-w-[120px] relative ${today ? 'bg-blue-50' : 'bg-gray-50'
+                            }`}
                         >
                           <div className="font-semibold text-sm text-gray-700">
                             {DAYS_OF_WEEK_RU[index]}
                           </div>
                           <div
-                            className={`text-lg font-bold mt-1 ${
-                              today ? 'text-blue-600' : 'text-gray-900'
-                            }`}
+                            className={`text - lg font - bold mt - 1 ${today ? 'text-blue-600' : 'text-gray-900'
+                              }`}
                           >
                             {formatDate(date)}
                           </div>
+                          {/* Booking Count Badge */}
+                          {(() => {
+                            const dailyBookings = bookings.filter(b => isSameDay(new Date(b.date), date))
+                            if (dailyBookings.length > 0) {
+                              return (
+                                <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">
+                                  {dailyBookings.length}
+                                </div>
+                              )
+                            }
+                            return null
+                          })()}
                         </th>
                       )
                     })}
@@ -397,12 +407,10 @@ export default function CalendarPage() {
 
                         return (
                           <td
-                            key={`${date.toISOString()}-${slot.label}`}
-                            className={`border-b border-r border-gray-200 p-1 h-16 transition-colors relative ${
-                              booking || isOccupied ? '' : 'hover:bg-blue-50 cursor-pointer'
-                            } ${today ? 'bg-blue-25' : 'bg-white'} ${
-                              isOccupied ? 'bg-gray-100' : ''
-                            }`}
+                            key={`${date.toISOString()} - ${slot.label}`}
+                            className={`border - b border - r border - gray - 200 p - 1 h - 16 transition - colors relative ${booking || isOccupied ? '' : 'hover:bg-blue-50 cursor-pointer'
+                              } ${today ? 'bg-blue-25' : 'bg-white'} ${isOccupied ? 'bg-gray-100' : ''
+                              }`}
                             onClick={() => {
                               if (!booking && !isOccupied) {
                                 handleSlotClick(date, slot.hour, slot.minute)
@@ -444,11 +452,10 @@ export default function CalendarPage() {
                   return (
                     <button
                       key={date.toISOString()}
-                      className={`flex-1 min-w-[70px] px-3 py-3 text-center border-r border-gray-200 last:border-r-0 transition-colors ${
-                        today
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                      }`}
+                      className={`flex-1 min-w-[70px] px-3 py-3 text-center border-r border-gray-200 last:border-r-0 transition-colors ${today
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                        }`}
                     >
                       <div className="text-xs font-medium">
                         {DAYS_OF_WEEK_RU[index]}
@@ -456,6 +463,18 @@ export default function CalendarPage() {
                       <div className="text-lg font-bold mt-1">
                         {date.getDate()}
                       </div>
+                      {/* Mobile Booking Count Badge */}
+                      {(() => {
+                        const dailyBookings = bookings.filter(b => isSameDay(new Date(b.date), date))
+                        if (dailyBookings.length > 0) {
+                          return (
+                            <div className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
+                              {dailyBookings.length}
+                            </div>
+                          )
+                        }
+                        return null
+                      })()}
                     </button>
                   )
                 })}
@@ -472,9 +491,8 @@ export default function CalendarPage() {
                 return (
                   <div
                     key={slot.label}
-                    className={`flex items-stretch transition-colors ${
-                      booking ? '' : 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
-                    }`}
+                    className={`flex items-stretch transition-colors ${booking ? '' : 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
+                      }`}
                   >
                     {/* Time Label */}
                     <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-3 py-4 text-sm font-medium text-gray-600 text-right">
@@ -503,43 +521,45 @@ export default function CalendarPage() {
         <div className="mt-6 text-center text-gray-500 text-sm">
           <p>Нажмите на свободный временной слот, чтобы создать запись</p>
         </div>
-      </main>
+      </main >
 
       {/* Booking Details Modal */}
-      <BookingDetailsModal
+      < BookingDetailsModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         booking={
           selectedBooking
             ? {
-                clientName: selectedBooking.clientName,
-                clientPhone: selectedBooking.clientPhone,
-                date: selectedBooking.date,
-                procedures: selectedBooking.procedures,
-                totalDuration: selectedBooking.totalDuration,
-                totalPrice: selectedBooking.totalPrice,
-              }
+              clientName: selectedBooking.clientName,
+              clientPhone: selectedBooking.clientPhone,
+              date: selectedBooking.date,
+              procedures: selectedBooking.procedures,
+              totalDuration: selectedBooking.totalDuration,
+              totalPrice: selectedBooking.totalPrice,
+            }
             : null
         }
         onEdit={handleEditBooking}
       />
 
       {/* Booking Form */}
-      {selectedSlot && (
-        <BookingForm
-          isOpen={isBookingFormOpen}
-          onClose={handleCloseBookingForm}
-          selectedDate={selectedSlot.date}
-          selectedTime={selectedSlot.time}
-          onBookingCreated={handleBookingCreated}
-          existingBookings={bookings}
-          editMode={!!editBookingData}
-          bookingId={editBookingData?.id}
-          initialClientId={editBookingData?.clientId}
-          initialProcedureIds={editBookingData?.procedureIds}
-          initialCustomDuration={editBookingData?.customDuration}
-        />
-      )}
-    </div>
+      {
+        selectedSlot && (
+          <BookingForm
+            isOpen={isBookingFormOpen}
+            onClose={handleCloseBookingForm}
+            selectedDate={selectedSlot.date}
+            selectedTime={selectedSlot.time}
+            onBookingCreated={handleBookingCreated}
+            existingBookings={bookings}
+            editMode={!!editBookingData}
+            bookingId={editBookingData?.id}
+            initialClientId={editBookingData?.clientId}
+            initialProcedureIds={editBookingData?.procedureIds}
+            initialCustomDuration={editBookingData?.customDuration}
+          />
+        )
+      }
+    </div >
   )
 }
