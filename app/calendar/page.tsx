@@ -47,6 +47,9 @@ export default function CalendarPage() {
     customDuration?: number // in minutes
   } | null>(null)
 
+  // Mobile state - default to today
+  const [selectedMobileDate, setSelectedMobileDate] = useState(() => new Date())
+
   // Fetch bookings for current week
   useEffect(() => {
     const fetchBookings = async () => {
@@ -285,9 +288,9 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="fixed inset-0 w-full h-full flex flex-col bg-gray-50 overflow-hidden">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-30">
+      <header className="bg-white shadow-sm flex-none z-50">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Календарь</h1>
 
@@ -330,7 +333,7 @@ export default function CalendarPage() {
       </header>
 
       {/* Calendar Grid */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="flex-1 overflow-y-auto max-w-7xl mx-auto px-4 py-6 w-full">
         {/* Loading State */}
         {isLoading && (
           <div className="text-center py-8">
@@ -445,16 +448,20 @@ export default function CalendarPage() {
           {/* Mobile View - Day Selector + Single Day Grid */}
           <div className="md:hidden">
             {/* Day Selector */}
-            <div className="overflow-x-auto border-b border-gray-200">
+            <div className="sticky top-0 z-30 bg-white overflow-x-auto border-b border-gray-200">
               <div className="flex">
                 {weekDates.map((date, index) => {
                   const today = isToday(date)
+                  const isSelected = isSameDay(date, selectedMobileDate)
                   return (
                     <button
                       key={date.toISOString()}
-                      className={`flex-1 min-w-[70px] px-3 py-3 text-center border-r border-gray-200 last:border-r-0 transition-colors ${today
+                      onClick={() => setSelectedMobileDate(date)}
+                      className={`flex-1 min-w-[70px] px-3 py-3 text-center border-r border-gray-200 last:border-r-0 transition-colors relative ${isSelected
                         ? 'bg-blue-600 text-white'
-                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                        : today
+                          ? 'bg-blue-100 text-blue-900'
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                         }`}
                     >
                       <div className="text-xs font-medium">
@@ -484,30 +491,41 @@ export default function CalendarPage() {
             {/* Single Day Time Slots */}
             <div className="divide-y divide-gray-200">
               {timeSlots.map((slot) => {
-                // For mobile, show today's bookings
-                const today = new Date()
-                const booking = findBookingForSlot(today, slot.hour, slot.minute)
+                const booking = findBookingForSlot(selectedMobileDate, slot.hour, slot.minute)
+                const isOccupied = isSlotOccupiedByEarlierBooking(selectedMobileDate, slot.hour, slot.minute)
 
                 return (
                   <div
                     key={slot.label}
-                    className={`flex items-stretch transition-colors ${booking ? '' : 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
-                      }`}
+                    className={`flex items-stretch transition-colors min-h-[64px] h-16 ${booking || isOccupied ? '' : 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
+                      } ${isOccupied ? 'bg-gray-100' : 'bg-white'}`}
+                    onClick={() => {
+                      if (!booking && !isOccupied) {
+                        handleSlotClick(selectedMobileDate, slot.hour, slot.minute)
+                      }
+                    }}
                   >
                     {/* Time Label */}
-                    <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-3 py-4 text-sm font-medium text-gray-600 text-right">
+                    <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 text-right flex items-center justify-end">
                       {slot.label}
                     </div>
 
                     {/* Time Slot Content */}
-                    <div className="flex-1 p-2 min-h-[60px]">
+                    <div className="flex-1 p-1 relative">
                       {booking ? (
-                        <BookingCard
-                          clientName={booking.clientName}
-                          procedures={booking.procedures}
-                          totalDuration={booking.totalDuration}
-                          onClick={() => handleBookingClick(booking)}
-                        />
+                        <div
+                          style={{
+                            height: `${calculateBookingHeight(booking.totalDuration)}px`,
+                          }}
+                          className="absolute top-1 left-1 right-1 z-10"
+                        >
+                          <BookingCard
+                            clientName={booking.clientName}
+                            procedures={booking.procedures}
+                            totalDuration={booking.totalDuration}
+                            onClick={() => handleBookingClick(booking)}
+                          />
+                        </div>
                       ) : null}
                     </div>
                   </div>
