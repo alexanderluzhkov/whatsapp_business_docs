@@ -332,6 +332,47 @@ export default function CalendarPage() {
         </div>
       </header>
 
+      {/* Mobile Day Selector (Fixed) */}
+      <div className="md:hidden flex-none z-30 bg-white overflow-x-auto border-b border-gray-200 shadow-sm">
+        <div className="flex">
+          {weekDates.map((date, index) => {
+            const today = isToday(date)
+            const isSelected = isSameDay(date, selectedMobileDate)
+            return (
+              <button
+                key={date.toISOString()}
+                onClick={() => setSelectedMobileDate(date)}
+                className={`flex-1 min-w-[70px] px-3 py-3 text-center border-r border-gray-200 last:border-r-0 transition-colors relative ${isSelected
+                  ? 'bg-blue-600 text-white'
+                  : today
+                    ? 'bg-blue-100 text-blue-900'
+                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                  }`}
+              >
+                <div className="text-xs font-medium">
+                  {DAYS_OF_WEEK_RU[index]}
+                </div>
+                <div className="text-lg font-bold mt-1">
+                  {date.getDate()}
+                </div>
+                {/* Mobile Booking Count Badge */}
+                {(() => {
+                  const dailyBookings = bookings.filter(b => isSameDay(new Date(b.date), date))
+                  if (dailyBookings.length > 0) {
+                    return (
+                      <div className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
+                        {dailyBookings.length}
+                      </div>
+                    )
+                  }
+                  return null
+                })()}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       {/* Calendar Grid */}
       <main className="flex-1 overflow-y-auto max-w-7xl mx-auto px-4 py-6 w-full">
         {/* Loading State */}
@@ -447,46 +488,7 @@ export default function CalendarPage() {
 
           {/* Mobile View - Day Selector + Single Day Grid */}
           <div className="md:hidden">
-            {/* Day Selector */}
-            <div className="sticky top-0 z-30 bg-white overflow-x-auto border-b border-gray-200">
-              <div className="flex">
-                {weekDates.map((date, index) => {
-                  const today = isToday(date)
-                  const isSelected = isSameDay(date, selectedMobileDate)
-                  return (
-                    <button
-                      key={date.toISOString()}
-                      onClick={() => setSelectedMobileDate(date)}
-                      className={`flex-1 min-w-[70px] px-3 py-3 text-center border-r border-gray-200 last:border-r-0 transition-colors relative ${isSelected
-                        ? 'bg-blue-600 text-white'
-                        : today
-                          ? 'bg-blue-100 text-blue-900'
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                        }`}
-                    >
-                      <div className="text-xs font-medium">
-                        {DAYS_OF_WEEK_RU[index]}
-                      </div>
-                      <div className="text-lg font-bold mt-1">
-                        {date.getDate()}
-                      </div>
-                      {/* Mobile Booking Count Badge */}
-                      {(() => {
-                        const dailyBookings = bookings.filter(b => isSameDay(new Date(b.date), date))
-                        if (dailyBookings.length > 0) {
-                          return (
-                            <div className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
-                              {dailyBookings.length}
-                            </div>
-                          )
-                        }
-                        return null
-                      })()}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+
 
             {/* Single Day Time Slots */}
             <div className="divide-y divide-gray-200">
