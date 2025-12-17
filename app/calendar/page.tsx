@@ -365,7 +365,7 @@ export default function CalendarPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm md:overflow-hidden">
           {/* Desktop View */}
           <div className="hidden md:block">
             {/* Scrollable calendar container with fixed height */}
@@ -520,6 +520,9 @@ export default function CalendarPage() {
                       booking || isOccupied ? '' : 'hover:bg-blue-50 active:bg-blue-100 cursor-pointer'
                     } ${isOccupied ? 'bg-gray-50' : ''}`}
                     onClick={() => !booking && !isOccupied && handleSlotClick(selectedDate, slot.hour, slot.minute)}
+                    style={booking ? {
+                      minHeight: `${Math.max(60, calculateBookingHeight(booking.totalDuration))}px`
+                    } : undefined}
                   >
                     {/* Time Label */}
                     <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-3 py-4 text-sm font-medium text-gray-600 text-right">
@@ -527,22 +530,15 @@ export default function CalendarPage() {
                     </div>
 
                     {/* Time Slot Content */}
-                    <div className="flex-1 p-2 min-h-[60px] relative">
-                      {booking ? (
-                        <div
-                          style={{
-                            minHeight: `${Math.max(60, calculateBookingHeight(booking.totalDuration))}px`,
-                          }}
-                          className="h-full"
-                        >
-                          <BookingCard
-                            clientName={booking.clientName}
-                            procedures={booking.procedures}
-                            totalDuration={booking.totalDuration}
-                            onClick={() => handleBookingClick(booking)}
-                          />
-                        </div>
-                      ) : null}
+                    <div className="flex-1 p-2 relative">
+                      {booking && (
+                        <BookingCard
+                          clientName={booking.clientName}
+                          procedures={booking.procedures}
+                          totalDuration={booking.totalDuration}
+                          onClick={() => handleBookingClick(booking)}
+                        />
+                      )}
                     </div>
                   </div>
                 )
