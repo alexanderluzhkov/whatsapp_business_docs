@@ -162,7 +162,7 @@ export default function CalendarPage() {
   }
 
   const calculateBookingHeight = (duration: string): number => {
-    return (parseDuration(duration) / 30) * 40
+    return (parseDuration(duration) / 30) * 36
   }
 
   const findBookingForSlot = (date: Date, hour: number, minute: number): BookingDisplay | undefined => {
@@ -217,49 +217,49 @@ export default function CalendarPage() {
     <div className="fixed inset-0 w-full h-full flex flex-col bg-gray-50 overflow-hidden">
       {/* Header */}
       <header className="bg-white shadow-sm flex-none z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-gray-900">Календарь</h1>
-            {viewMode === 'day' && (
+        <div className="max-w-7xl mx-auto px-4 py-2">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold text-gray-900">Календарь</h1>
+            <div className="flex items-center gap-3">
+              {viewMode === 'day' && (
+                <button
+                  onClick={() => setViewMode('month')}
+                  className="text-blue-600 text-sm font-medium hover:text-blue-700"
+                >
+                  ← Месяц
+                </button>
+              )}
               <button
-                onClick={() => setViewMode('month')}
-                className="text-blue-600 font-medium hover:text-blue-700 flex items-center gap-1"
+                onClick={handleToday}
+                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors"
               >
-                ← К месяцу
+                Сегодня
               </button>
-            )}
+            </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between">
-            <div className="flex gap-2 flex-1">
-              <button
-                onClick={handlePrevious}
-                className="flex-1 sm:flex-none px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                aria-label="Previous"
-              >
-                ← {viewMode === 'month' ? 'Пред. месяц' : 'Пред. день'}
-              </button>
-              <button
-                onClick={handleNext}
-                className="flex-1 sm:flex-none px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                aria-label="Next"
-              >
-                {viewMode === 'month' ? 'След. месяц' : 'След. день'} →
-              </button>
+          <div className="flex items-center gap-2 mt-2">
+            <button
+              onClick={handlePrevious}
+              className="p-2 bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 flex-none"
+              aria-label="Previous"
+            >
+              ←
+            </button>
+
+            <div className="flex-1 text-center font-bold text-gray-800 text-sm truncate">
+              {viewMode === 'month'
+                ? `${getMonthName(viewDate)} ${viewDate.getFullYear()}`
+                : formatDateLong(viewDate)}
             </div>
 
             <button
-              onClick={handleToday}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+              onClick={handleNext}
+              className="p-2 bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 flex-none"
+              aria-label="Next"
             >
-              Сегодня
+              →
             </button>
-          </div>
-
-          <div className="mt-3 text-lg font-semibold text-gray-800">
-            {viewMode === 'month'
-              ? `${getMonthName(viewDate)} ${viewDate.getFullYear()}`
-              : formatDateLong(viewDate)}
           </div>
         </div>
       </header>
@@ -331,7 +331,7 @@ export default function CalendarPage() {
                     return (
                       <div
                         key={slot.label}
-                        className={`flex min-h-[40px] transition-colors relative ${!booking && !isOccupied ? 'hover:bg-blue-50/50 active:bg-blue-50 cursor-pointer' : ''}`}
+                        className={`flex min-h-[36px] transition-colors relative ${!booking && !isOccupied ? 'hover:bg-blue-50/50 active:bg-blue-50 cursor-pointer' : ''}`}
                         onClick={() => !booking && !isOccupied && handleSlotClick(viewDate, slot.hour, slot.minute)}
                       >
                         <div className="w-16 flex-none bg-gray-50/50 border-r border-gray-100 px-2 py-2 text-[10px] font-medium text-gray-400 text-right">
