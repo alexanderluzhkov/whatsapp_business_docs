@@ -78,7 +78,7 @@ export async function getBookings(
 
   // Add date filter if provided
   if (startDate && endDate) {
-    const filter = `AND(IS_AFTER({Date}, '${startDate}'), IS_BEFORE({Date}, '${endDate}'))`
+    const filter = `AND(IS_AFTER({Date}, DATEADD('${startDate}', -1, 'days')), IS_BEFORE({Date}, DATEADD('${endDate}', 1, 'days')))`
     url += `?filterByFormula=${encodeURIComponent(filter)}`
   }
 

@@ -22,6 +22,21 @@ export const WORKING_HOURS = {
   end: 21,
 }
 
+export const MONTHS_RU = [
+  'Январь',
+  'Февраль',
+  'Март',
+  'Апрель',
+  'Май',
+  'Июнь',
+  'Июль',
+  'Август',
+  'Сентябрь',
+  'Октябрь',
+  'Ноябрь',
+  'Декабрь',
+]
+
 export const SLOT_DURATION_MINUTES = 30
 
 /**
@@ -140,4 +155,74 @@ export function getNextWeek(currentSunday: Date): Date {
   const newDate = new Date(currentSunday)
   newDate.setDate(newDate.getDate() + 7)
   return newDate
+}
+
+/**
+ * Get name of the month in Russian
+ */
+export function getMonthName(date: Date): string {
+  return MONTHS_RU[date.getMonth()]
+}
+
+/**
+ * Navigate to previous month
+ */
+export function getPreviousMonth(date: Date): Date {
+  const d = new Date(date)
+  d.setMonth(d.getMonth() - 1)
+  return d
+}
+
+/**
+ * Navigate to next month
+ */
+export function getNextMonth(date: Date): Date {
+  const d = new Date(date)
+  d.setMonth(d.getMonth() + 1)
+  return d
+}
+
+/**
+ * Get all days for a month view grid (including padding from adjacent months)
+ */
+export function getMonthViewDays(date: Date): Date[] {
+  const year = date.getFullYear()
+  const month = date.getMonth()
+
+  // First day of the month
+  const firstDayOfMonth = new Date(year, month, 1)
+  // Last day of the month
+  const lastDayOfMonth = new Date(year, month + 1, 0)
+
+  // Start from the Sunday of the week containing the first day
+  const startDate = new Date(firstDayOfMonth)
+  const dayOfWeek = firstDayOfMonth.getDay()
+  startDate.setDate(startDate.getDate() - dayOfWeek)
+
+  // End at the Saturday of the week containing the last day
+  const endDate = new Date(lastDayOfMonth)
+  const lastDayOfWeek = lastDayOfMonth.getDay()
+  endDate.setDate(endDate.getDate() + (6 - lastDayOfWeek))
+
+  const days: Date[] = []
+  const current = new Date(startDate)
+
+  while (current <= endDate) {
+    days.push(new Date(current))
+    current.setDate(current.getDate() + 1)
+  }
+
+  // Ensure we have exactly 42 days (6 weeks) for a consistent grid if requested, 
+  // but for now, we'll just return the full weeks.
+  return days
+}
+
+/**
+ * Check if a date is in the same month as another date
+ */
+export function isSameMonth(date1: Date, date2: Date): boolean {
+  return (
+    date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth()
+  )
 }

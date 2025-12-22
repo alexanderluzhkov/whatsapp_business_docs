@@ -4,8 +4,12 @@ import type { CreateBookingData } from '@/types/airtable'
 
 export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+
     // Fetch bookings from Airtable
-    const bookings = await getBookings()
+    const bookings = await getBookings(startDate || undefined, endDate || undefined)
 
     return NextResponse.json({
       success: true,
