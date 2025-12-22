@@ -18,7 +18,7 @@ export const DAYS_OF_WEEK_FULL_RU = [
 ]
 
 export const WORKING_HOURS = {
-  start: 9,
+  start: 8,
   end: 21,
 }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   formatDate,
   formatDateLong,
@@ -23,6 +23,7 @@ export default function CalendarPage() {
   // Navigation state
   const [viewDate, setViewDate] = useState(() => new Date())
   const [viewMode, setViewMode] = useState<'month' | 'day'>('month')
+  const mainRef = useRef<HTMLElement>(null)
 
   // Booking state
   const [bookings, setBookings] = useState<BookingDisplay[]>([])
@@ -47,6 +48,13 @@ export default function CalendarPage() {
   // Memoized calendar days for the current viewDate month
   const calendarDays = useMemo(() => getMonthViewDays(viewDate), [viewDate])
   const timeSlots = generateTimeSlots()
+
+  // Scroll to top when switching to day view to show the start of the day (8:00)
+  useEffect(() => {
+    if (viewMode === 'day' && mainRef.current) {
+      mainRef.current.scrollTo(0, 0)
+    }
+  }, [viewMode])
 
   // Fetch bookings for the current visible calendar month
   useEffect(() => {
@@ -257,7 +265,7 @@ export default function CalendarPage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto">
+      <main ref={mainRef} className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto">
         {isLoading && (
           <div className="flex flex-col items-center justify-center p-12">
             <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-blue-600" />
