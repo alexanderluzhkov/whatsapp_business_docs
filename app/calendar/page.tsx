@@ -162,7 +162,7 @@ export default function CalendarPage() {
   }
 
   const calculateBookingHeight = (duration: string): number => {
-    return (parseDuration(duration) / 30) * 64
+    return (parseDuration(duration) / 30) * 40
   }
 
   const findBookingForSlot = (date: Date, hour: number, minute: number): BookingDisplay | undefined => {
@@ -331,10 +331,10 @@ export default function CalendarPage() {
                     return (
                       <div
                         key={slot.label}
-                        className={`flex min-h-[64px] transition-colors relative ${!booking && !isOccupied ? 'hover:bg-blue-50/50 active:bg-blue-50 cursor-pointer' : ''}`}
+                        className={`flex min-h-[40px] transition-colors relative ${!booking && !isOccupied ? 'hover:bg-blue-50/50 active:bg-blue-50 cursor-pointer' : ''}`}
                         onClick={() => !booking && !isOccupied && handleSlotClick(viewDate, slot.hour, slot.minute)}
                       >
-                        <div className="w-16 flex-none bg-gray-50/50 border-r border-gray-100 px-2 py-4 text-xs font-medium text-gray-400 text-right">
+                        <div className="w-16 flex-none bg-gray-50/50 border-r border-gray-100 px-2 py-2 text-[10px] font-medium text-gray-400 text-right">
                           {slot.label}
                         </div>
                         <div className="flex-1 p-1 relative">
