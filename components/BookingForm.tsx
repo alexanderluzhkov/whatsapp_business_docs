@@ -43,6 +43,12 @@ export default function BookingForm({
   const [customDuration, setCustomDuration] = useState<number>(0) // in minutes
   const [isDurationManuallyEdited, setIsDurationManuallyEdited] = useState(false) // Track manual edits
 
+  // New Client state
+  const [isCreatingNewClient, setIsCreatingNewClient] = useState(false)
+  const [newClientFirstName, setNewClientFirstName] = useState('')
+  const [newClientLastName, setNewClientLastName] = useState('')
+  const [newClientPhone, setNewClientPhone] = useState('')
+
   // UI state
   const [isLoadingData, setIsLoadingData] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -113,7 +119,12 @@ export default function BookingForm({
   // Update editable date/time when props change (without resetting form)
   useEffect(() => {
     if (isOpen) {
-      const dateStr = selectedDate.toISOString().split('T')[0] // YYYY-MM-DD
+      // Use local date components to avoid UTC shift issues
+      const year = selectedDate.getFullYear()
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0')
+      const day = String(selectedDate.getDate()).padStart(2, '0')
+      const dateStr = `${year}-${month}-${day}`
+
       setEditableDate(dateStr)
       setEditableTime(selectedTime)
     }
@@ -151,6 +162,10 @@ export default function BookingForm({
         setCustomDuration(0)
         setIsDurationManuallyEdited(false)
       }
+      setIsCreatingNewClient(false)
+      setNewClientFirstName('')
+      setNewClientLastName('')
+      setNewClientPhone('')
       setError(null)
       setConflictWarning(null)
     }
@@ -339,6 +354,52 @@ export default function BookingForm({
     }
   }
 
+  // Handle creating a new client
+  const handleCreateClient = async () => {
+    if (!newClientFirstName || !newClientPhone) {
+      setError('Имя и телефон обязательны для нового клиента')
+      return
+    }
+
+    setIsSaving(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/clients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: newClientFirstName,
+          lastName: newClientLastName,
+          phoneNumber: newClientPhone,
+        }),
+      })
+
+      const data = await response.json()
+      if (!data.success) {
+        throw new Error(data.error || 'Не удалось создать клиента')
+      }
+
+      // Add to local list and select
+      const newClient = data.client
+      setClients(prev => [...prev, newClient])
+      setSelectedClientId(newClient.id)
+      setIsCreatingNewClient(false)
+
+      // Clear fields
+      setNewClientFirstName('')
+      setNewClientLastName('')
+      setNewClientPhone('')
+    } catch (err) {
+      console.error('Error creating client:', err)
+      setError(err instanceof Error ? err.message : 'Ошибка создания клиента')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -487,24 +548,83 @@ export default function BookingForm({
 
               {/* Client Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Клиент <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Клиент <span className="text-red-500">*</span>
+                  </label>
+                  {!selectedClientId && !isCreatingNewClient && (
+                    <button
+                      type="button"
+                      onClick={() => setIsCreatingNewClient(true)}
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                    >
+                      + Новый клиент
+                    </button>
+                  )}
+                  {isCreatingNewClient && !selectedClientId && (
+                    <button
+                      type="button"
+                      onClick={() => setIsCreatingNewClient(false)}
+                      className="text-xs font-semibold text-gray-500 hover:text-gray-600"
+                    >
+                      Отмена
+                    </button>
+                  )}
+                </div>
 
-                {/* Show search input only when no client is selected */}
-                {!selectedClient && (
+                {/* New Client Form */}
+                {isCreatingNewClient && !selectedClientId && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        placeholder="Имя *"
+                        value={newClientFirstName}
+                        onChange={(e) => setNewClientFirstName(e.target.value)}
+                        className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Фамилия"
+                        value={newClientLastName}
+                        onChange={(e) => setNewClientLastName(e.target.value)}
+                        className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="tel"
+                        placeholder="Телефон *"
+                        value={newClientPhone}
+                        onChange={(e) => setNewClientPhone(e.target.value)}
+                        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCreateClient}
+                        disabled={isSaving}
+                        className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        OK
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Existing Client Search (only when no client is selected and not creating new) */}
+                {!selectedClientId && !isCreatingNewClient && (
                   <>
                     <input
                       type="text"
-                      placeholder="Выберите клиента"
+                      placeholder="Поиск клиента..."
                       value={clientSearch}
                       onChange={(e) => setClientSearch(e.target.value)}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                     />
                     {clientSearch && (
-                      <div className="mt-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg divide-y divide-gray-200">
+                      <div className="mt-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg divide-y divide-gray-200 shadow-md">
                         {filteredClients.length === 0 ? (
-                          <div className="px-4 py-3 text-gray-500 text-sm">
+                          <div className="px-4 py-3 text-gray-500 text-sm bg-white">
                             Клиенты не найдены
                           </div>
                         ) : (
@@ -516,11 +636,9 @@ export default function BookingForm({
                                 setSelectedClientId(client.id)
                                 setClientSearch('')
                               }}
-                              className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors bg-white"
+                              className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors bg-white font-medium text-sm text-gray-900"
                             >
-                              <div className="text-sm font-medium text-gray-900">
-                                {formatClientDisplay(client)}
-                              </div>
+                              {formatClientDisplay(client)}
                             </button>
                           ))
                         )}
@@ -530,7 +648,7 @@ export default function BookingForm({
                 )}
 
                 {/* Show selected client with change button */}
-                {selectedClient && (
+                {selectedClientId && selectedClient && (
                   <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
                     <div className="text-sm font-medium text-blue-900">
                       {formatClientDisplay(selectedClient)}
@@ -540,8 +658,9 @@ export default function BookingForm({
                       onClick={() => {
                         setSelectedClientId('')
                         setClientSearch('')
+                        setIsCreatingNewClient(false)
                       }}
-                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      className="text-blue-600 hover:text-blue-800 text-sm font-bold"
                     >
                       Изменить
                     </button>
@@ -565,9 +684,8 @@ export default function BookingForm({
                     return (
                       <label
                         key={procedure.id}
-                        className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                          isSelected ? 'bg-purple-50 border border-purple-200' : 'bg-white border border-gray-200 hover:bg-gray-50'
-                        }`}
+                        className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${isSelected ? 'bg-purple-50 border border-purple-200' : 'bg-white border border-gray-200 hover:bg-gray-50'
+                          }`}
                       >
                         <input
                           type="checkbox"

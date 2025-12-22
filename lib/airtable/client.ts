@@ -49,6 +49,16 @@ export async function getClient(recordId: string): Promise<Client> {
   return airtableFetch<Client>(url)
 }
 
+export async function createClient(
+  data: Partial<ClientFields>
+): Promise<Client> {
+  const url = getTableUrl(AIRTABLE_CONFIG.tables.clients)
+  return airtableFetch<Client>(url, {
+    method: 'POST',
+    body: JSON.stringify({ fields: data }),
+  })
+}
+
 // ========== PROCEDURES ==========
 
 export async function getProcedures(): Promise<Procedure[]> {
