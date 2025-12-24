@@ -37,6 +37,8 @@ export async function GET(request: Request) {
             return str.replace(/[,;\\]/g, (match) => `\\${match}`).replace(/\n/g, '\\n')
         }
 
+        const host = request.headers.get('host') || 'nailmaster.vercel.app'
+
         let icsContent = [
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
@@ -44,7 +46,10 @@ export async function GET(request: Request) {
             'CALSCALE:GREGORIAN',
             'METHOD:PUBLISH',
             'X-WR-CALNAME:Nail Master Bookings',
+            'X-WR-CALDESC:Расписание записей мастера маникюра',
             'X-WR-TIMEZONE:Asia/Jerusalem',
+            'X-PUBLISHED-TTL:PT1H',
+            'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
         ].join('\r\n') + '\r\n'
 
         bookings.forEach((booking: Booking) => {
@@ -78,12 +83,14 @@ export async function GET(request: Request) {
 
             icsContent += [
                 'BEGIN:VEVENT',
-                `UID:${id}@nailmaster.vercel.app`,
+                `UID:${id}@${host}`,
                 `DTSTAMP:${formatDateICS(new Date().toISOString())}`,
                 `DTSTART:${formatDateICS(startTime.toISOString())}`,
                 `DTEND:${formatDateICS(endTime.toISOString())}`,
                 `SUMMARY:${escapeICS(summary)}`,
                 `DESCRIPTION:${escapeICS(description)}`,
+                'TRANSP:OPAQUE',
+                'STATUS:CONFIRMED',
                 'END:VEVENT',
             ].join('\r\n') + '\r\n'
         })
