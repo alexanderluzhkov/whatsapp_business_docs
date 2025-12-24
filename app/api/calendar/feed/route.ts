@@ -96,9 +96,15 @@ export async function GET(request: Request) {
             const { fields, id, createdTime } = booking
             const isMeTime = fields.Is_Me_Time === true
             const date = fields.Date || ''
-            const durationSeconds = fields.Total_Duration || 3600
 
+            // Validate start time
             const startTime = new Date(date)
+            if (isNaN(startTime.getTime())) {
+                console.warn(`Skipping booking ${id} due to invalid date: ${date}`)
+                return
+            }
+
+            const durationSeconds = fields.Total_Duration || 3600
             const endTime = new Date(startTime.getTime() + durationSeconds * 1000)
 
             let summary = ''
@@ -132,6 +138,20 @@ export async function GET(request: Request) {
             icsLines.push('STATUS:CONFIRMED')
             icsLines.push('END:VEVENT')
         })
+
+        // Add a placeholder event if feed is empty (iOS sometimes fails verification on empty feeds)
+        if (icsLines.length <= 80) { // 80 lines is the header block
+            icsLines.push('BEGIN:VEVENT')
+            icsLines.push(`UID:welcome@${host}`)
+            icsLines.push(`DTSTAMP:${formatDateICS(new Date().toISOString())}`)
+            icsLines.push(`DTSTART;TZID=Asia/Jerusalem:${formatDateICS(new Date().toISOString()).replace('Z', '')}`)
+            icsLines.push(`DTEND;TZID=Asia/Jerusalem:${formatDateICS(new Date(Date.now() + 3600000).toISOString()).replace('Z', '')}`)
+            icsLines.push('SUMMARY:Календарь Nail Master подключен!')
+            icsLines.push('DESCRIPTION:Ваши записи появятся здесь автоматически.')
+            icsLines.push('TRANSP:OPAQUE')
+            icsLines.push('STATUS:CONFIRMED')
+            icsLines.push('END:VEVENT')
+        }
 
         icsLines.push('END:VCALENDAR')
 

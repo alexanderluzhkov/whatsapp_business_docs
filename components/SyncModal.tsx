@@ -33,7 +33,7 @@ export default function SyncModal({ isOpen, onClose }: SyncModalProps) {
                 <div className="p-6">
                     <div className="flex justify-between items-center mb-6">
                         <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                            <span>📅</span> Синхронизация
+                            <span>📅</span> Синхронизация <span className="text-[10px] font-normal text-gray-400 ml-2">v2.1</span>
                         </h2>
                         <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -85,12 +85,12 @@ export default function SyncModal({ isOpen, onClose }: SyncModalProps) {
                                 <li>Настройки → <span className="font-bold">Календарь</span> → Учетные записи</li>
                                 <li>Новая уч. запись → Другое</li>
                                 <li><span className="font-bold">Подписной календарь</span></li>
-                                <li>Вставьте ссылку в поле &quot;Сервер&quot; → Далее</li>
+                                <li>Вставьте <span className="text-blue-600 font-bold">ОСНОВНУЮ ССЫЛКУ</span> в поле &quot;Сервер&quot; → Далее</li>
                                 <li className="bg-blue-100/50 p-1 rounded">
                                     <span className="font-bold text-blue-600">Важно:</span> Проверка может занять до <span className="font-bold">30 секунд</span>. Не закрывайте окно!
                                 </li>
                                 <li>Если ошибка SSL — нажмите <span className="font-bold text-blue-600">&quot;Продолжить&quot;</span></li>
-                                <li>На экране Подписка — нажмите <span className="font-bold text-blue-600">&quot;Сохранить&quot;</span> (справа вверху)</li>
+                                <li>Если пишет &quot;Не удается проверить&quot; — <span className="font-bold underline text-blue-700">все равно</span> нажмите <span className="font-bold">Сохранить</span> (справа вверху)</li>
                                 <li>Если будет повторный вопрос &quot;Продолжить?&quot; — нажмите <span className="font-bold text-blue-600">&quot;Сохранить&quot;</span> еще раз</li>
                             </ol>
                         </div>
