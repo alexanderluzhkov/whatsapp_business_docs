@@ -30,7 +30,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { clientId, procedureIds, date, customDuration } = body
+    const { clientId, procedureIds, date, customDuration, isMeTime, meTimeTitle } = body
 
     // Validate input
     if (!clientId || !procedureIds || !Array.isArray(procedureIds) || procedureIds.length === 0 || !date) {
@@ -53,6 +53,12 @@ export async function POST(request: Request) {
     // Add custom duration if provided (in seconds)
     if (customDuration && typeof customDuration === 'number') {
       bookingData.Duration_Castomed = customDuration
+    }
+
+    // Add Me Time fields
+    if (typeof isMeTime === 'boolean') {
+      bookingData.Is_Me_Time = isMeTime
+      bookingData.Me_Time_Title = meTimeTitle || 'Личное время'
     }
 
     // Create booking in Airtable

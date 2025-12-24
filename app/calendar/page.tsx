@@ -43,6 +43,8 @@ export default function CalendarPage() {
     clientId: string
     procedureIds: string[]
     customDuration?: number // in minutes
+    isMeTime?: boolean
+    meTimeTitle?: string
   } | null>(null)
 
   // Memoized calendar days for the current viewDate month
@@ -107,6 +109,8 @@ export default function CalendarPage() {
               totalDuration,
               totalPrice: fields.Total_Price || 0,
               bookingNumber: fields.Booking_Number_New || 0,
+              isMeTime: !!fields.Is_Me_Time,
+              meTimeTitle: fields.Me_Time_Title,
             }
           })
           .filter((booking: BookingDisplay | null): booking is BookingDisplay => booking !== null)
@@ -207,6 +211,8 @@ export default function CalendarPage() {
       clientId: raw.fields.Client?.[0],
       procedureIds: raw.fields.Procedures || [],
       customDuration: raw.fields.Duration_Castomed ? Math.floor(raw.fields.Duration_Castomed / 60) : undefined,
+      isMeTime: !!raw.fields.Is_Me_Time,
+      meTimeTitle: raw.fields.Me_Time_Title,
     })
     const d = new Date(selectedBooking.date)
     setSelectedSlot({ date: d, time: `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}` })
@@ -347,6 +353,8 @@ export default function CalendarPage() {
                                 clientName={booking.clientName}
                                 procedures={booking.procedures}
                                 totalDuration={booking.totalDuration}
+                                isMeTime={booking.isMeTime}
+                                meTimeTitle={booking.meTimeTitle}
                                 onClick={() => handleBookingClick(booking)}
                               />
                             </div>
@@ -381,13 +389,18 @@ export default function CalendarPage() {
           onClose={() => { setIsBookingFormOpen(false); setSelectedSlot(null); setEditBookingData(null); }}
           selectedDate={selectedSlot.date}
           selectedTime={selectedSlot.time}
-          onBookingCreated={() => setViewDate(new Date(viewDate))} // Refresh
+          onBookingCreated={() => {
+            // Trigger a re-fetch of bookings
+            setViewDate(new Date(viewDate))
+          }}
           existingBookings={bookings}
           editMode={!!editBookingData}
           bookingId={editBookingData?.id}
           initialClientId={editBookingData?.clientId}
           initialProcedureIds={editBookingData?.procedureIds}
           initialCustomDuration={editBookingData?.customDuration}
+          initialIsMeTime={editBookingData?.isMeTime}
+          initialMeTimeTitle={editBookingData?.meTimeTitle}
         />
       )}
     </div>

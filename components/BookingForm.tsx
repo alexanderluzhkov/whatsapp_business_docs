@@ -17,6 +17,8 @@ interface BookingFormProps {
   initialClientId?: string
   initialProcedureIds?: string[]
   initialCustomDuration?: number // in minutes
+  initialIsMeTime?: boolean
+  initialMeTimeTitle?: string
 }
 
 export default function BookingForm({
@@ -31,6 +33,8 @@ export default function BookingForm({
   initialClientId,
   initialProcedureIds,
   initialCustomDuration,
+  initialIsMeTime,
+  initialMeTimeTitle,
 }: BookingFormProps) {
   // Form state
   const [clients, setClients] = useState<Client[]>([])
@@ -42,6 +46,8 @@ export default function BookingForm({
   const [editableTime, setEditableTime] = useState('')
   const [customDuration, setCustomDuration] = useState<number>(0) // in minutes
   const [isDurationManuallyEdited, setIsDurationManuallyEdited] = useState(false) // Track manual edits
+  const [isMeTime, setIsMeTime] = useState(false)
+  const [meTimeTitle, setMeTimeTitle] = useState('')
 
   // New Client state
   const [isCreatingNewClient, setIsCreatingNewClient] = useState(false)
@@ -154,6 +160,8 @@ export default function BookingForm({
           setCustomDuration(0)
           setIsDurationManuallyEdited(false)
         }
+        setIsMeTime(initialIsMeTime || false)
+        setMeTimeTitle(initialMeTimeTitle || '')
       } else {
         // Create mode: reset form
         setSelectedClientId('')
@@ -161,6 +169,8 @@ export default function BookingForm({
         setClientSearch('')
         setCustomDuration(0)
         setIsDurationManuallyEdited(false)
+        setIsMeTime(false)
+        setMeTimeTitle('')
       }
       setIsCreatingNewClient(false)
       setNewClientFirstName('')
@@ -171,16 +181,22 @@ export default function BookingForm({
     }
   }, [isOpen, editMode, initialClientId, initialProcedureIds, initialCustomDuration])
 
-  // Update custom duration when procedures change (only if not manually edited)
   useEffect(() => {
-    if (selectedProcedureIds.length > 0 && procedures.length > 0) {
+    if (selectedProcedureIds.length > 0 && procedures.length > 0 && !isMeTime) {
       const calculatedMinutes = calculateTotalMinutes()
       // Only auto-update if duration hasn't been manually edited
       if (!isDurationManuallyEdited) {
         setCustomDuration(calculatedMinutes)
       }
     }
-  }, [selectedProcedureIds, procedures, isDurationManuallyEdited])
+  }, [selectedProcedureIds, procedures, isDurationManuallyEdited, isMeTime])
+
+  // Set default 60 min for Me Time when switched on
+  useEffect(() => {
+    if (isMeTime && !editMode && !isDurationManuallyEdited) {
+      setCustomDuration(60)
+    }
+  }, [isMeTime, editMode, isDurationManuallyEdited])
 
   // Check for conflicts when procedures or custom duration change
   useEffect(() => {
@@ -406,13 +422,18 @@ export default function BookingForm({
     setError(null)
 
     // Validate
-    if (!selectedClientId) {
+    if (!isMeTime && !selectedClientId) {
       setError('Пожалуйста, выберите клиента')
       return
     }
 
-    if (selectedProcedureIds.length === 0) {
+    if (!isMeTime && selectedProcedureIds.length === 0) {
       setError('Пожалуйста, выберите хотя бы одну процедуру')
+      return
+    }
+
+    if (isMeTime && !meTimeTitle.trim()) {
+      setError('Пожалуйста, укажите название активности')
       return
     }
 
@@ -424,6 +445,15 @@ export default function BookingForm({
       const bookingDate = new Date(editableDate)
       bookingDate.setHours(hours, minutes, 0, 0)
 
+      const payload = {
+        clientId: isMeTime ? null : selectedClientId,
+        procedureIds: isMeTime ? [] : selectedProcedureIds,
+        date: bookingDate.toISOString(),
+        customDuration: customDuration * 60, // Convert minutes to seconds for Airtable
+        isMeTime,
+        meTimeTitle: isMeTime ? meTimeTitle : undefined,
+      }
+
       if (editMode && bookingId) {
         // Update existing booking
         const response = await fetch(`/api/bookings/${bookingId}`, {
@@ -431,12 +461,7 @@ export default function BookingForm({
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            clientId: selectedClientId,
-            procedureIds: selectedProcedureIds,
-            date: bookingDate.toISOString(),
-            customDuration: customDuration * 60, // Convert minutes to seconds for Airtable
-          }),
+          body: JSON.stringify(payload),
         })
 
         const data = await response.json()
@@ -451,12 +476,7 @@ export default function BookingForm({
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            clientId: selectedClientId,
-            procedureIds: selectedProcedureIds,
-            date: bookingDate.toISOString(),
-            customDuration: customDuration * 60, // Convert minutes to seconds for Airtable
-          }),
+          body: JSON.stringify(payload),
         })
 
         const data = await response.json()
@@ -546,175 +566,213 @@ export default function BookingForm({
                 </div>
               </div>
 
-              {/* Client Selection */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Клиент <span className="text-red-500">*</span>
+              {/* Booking Type Toggle */}
+              <div className="flex p-1 bg-gray-100 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setIsMeTime(false)}
+                  className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${!isMeTime ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                >
+                  Клиент
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsMeTime(true)}
+                  className={`flex-1 py-1 text-sm font-medium rounded-md transition-all ${isMeTime ? 'bg-white shadow-sm text-sky-600' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                >
+                  Личное время
+                </button>
+              </div>
+
+              {isMeTime ? (
+                /* Me Time Title */
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Что планируете? <span className="text-red-500">*</span>
                   </label>
-                  {!selectedClientId && !isCreatingNewClient && (
-                    <button
-                      type="button"
-                      onClick={() => setIsCreatingNewClient(true)}
-                      className="text-xs font-semibold text-blue-600 hover:text-blue-700"
-                    >
-                      + Новый клиент
-                    </button>
-                  )}
-                  {isCreatingNewClient && !selectedClientId && (
-                    <button
-                      type="button"
-                      onClick={() => setIsCreatingNewClient(false)}
-                      className="text-xs font-semibold text-gray-500 hover:text-gray-600"
-                    >
-                      Отмена
-                    </button>
-                  )}
+                  <input
+                    type="text"
+                    placeholder="Например: Обед, Обучение..."
+                    value={meTimeTitle}
+                    onChange={(e) => setMeTimeTitle(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none"
+                  />
                 </div>
-
-                {/* New Client Form */}
-                {isCreatingNewClient && !selectedClientId && (
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <input
-                        type="text"
-                        placeholder="Имя *"
-                        value={newClientFirstName}
-                        onChange={(e) => setNewClientFirstName(e.target.value)}
-                        className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Фамилия"
-                        value={newClientLastName}
-                        onChange={(e) => setNewClientLastName(e.target.value)}
-                        className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
+              ) : (
+                <>
+                  {/* Client Selection */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Клиент <span className="text-red-500">*</span>
+                      </label>
+                      {!selectedClientId && !isCreatingNewClient && (
+                        <button
+                          type="button"
+                          onClick={() => setIsCreatingNewClient(true)}
+                          className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                        >
+                          + Новый клиент
+                        </button>
+                      )}
+                      {isCreatingNewClient && !selectedClientId && (
+                        <button
+                          type="button"
+                          onClick={() => setIsCreatingNewClient(false)}
+                          className="text-xs font-semibold text-gray-500 hover:text-gray-600"
+                        >
+                          Отмена
+                        </button>
+                      )}
                     </div>
-                    <div className="flex gap-2">
-                      <input
-                        type="tel"
-                        placeholder="Телефон *"
-                        value={newClientPhone}
-                        onChange={(e) => setNewClientPhone(e.target.value)}
-                        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleCreateClient}
-                        disabled={isSaving}
-                        className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                      >
-                        OK
-                      </button>
-                    </div>
-                  </div>
-                )}
 
-                {/* Existing Client Search (only when no client is selected and not creating new) */}
-                {!selectedClientId && !isCreatingNewClient && (
-                  <>
-                    <input
-                      type="text"
-                      placeholder="Поиск клиента..."
-                      value={clientSearch}
-                      onChange={(e) => setClientSearch(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    />
-                    {clientSearch && (
-                      <div className="mt-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg divide-y divide-gray-200 shadow-md">
-                        {filteredClients.length === 0 ? (
-                          <div className="px-4 py-3 text-gray-500 text-sm bg-white">
-                            Клиенты не найдены
-                          </div>
-                        ) : (
-                          filteredClients.map((client) => (
-                            <button
-                              key={client.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedClientId(client.id)
-                                setClientSearch('')
-                              }}
-                              className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors bg-white font-medium text-sm text-gray-900"
-                            >
-                              {formatClientDisplay(client)}
-                            </button>
-                          ))
-                        )}
+                    {/* New Client Form */}
+                    {isCreatingNewClient && !selectedClientId && (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <input
+                            type="text"
+                            placeholder="Имя *"
+                            value={newClientFirstName}
+                            onChange={(e) => setNewClientFirstName(e.target.value)}
+                            className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Фамилия"
+                            value={newClientLastName}
+                            onChange={(e) => setNewClientLastName(e.target.value)}
+                            className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="tel"
+                            placeholder="Телефон *"
+                            value={newClientPhone}
+                            onChange={(e) => setNewClientPhone(e.target.value)}
+                            className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleCreateClient}
+                            disabled={isSaving}
+                            className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            OK
+                          </button>
+                        </div>
                       </div>
                     )}
-                  </>
-                )}
 
-                {/* Show selected client with change button */}
-                {selectedClientId && selectedClient && (
-                  <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
-                    <div className="text-sm font-medium text-blue-900">
-                      {formatClientDisplay(selectedClient)}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedClientId('')
-                        setClientSearch('')
-                        setIsCreatingNewClient(false)
-                      }}
-                      className="text-blue-600 hover:text-blue-800 text-sm font-bold"
-                    >
-                      Изменить
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Procedures */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Процедуры <span className="text-red-500">*</span>
-                </label>
-                <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3">
-                  {procedures.map((procedure) => {
-                    const duration = procedure.fields.Duration
-                      ? formatDuration(procedure.fields.Duration)
-                      : '0:00'
-                    const price = Math.round(procedure.fields.Price || 0)
-                    const isSelected = selectedProcedureIds.includes(procedure.id)
-
-                    return (
-                      <label
-                        key={procedure.id}
-                        className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${isSelected ? 'bg-purple-50 border border-purple-200' : 'bg-white border border-gray-200 hover:bg-gray-50'
-                          }`}
-                      >
+                    {/* Existing Client Search */}
+                    {!selectedClientId && !isCreatingNewClient && (
+                      <>
                         <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleProcedure(procedure.id)}
-                          className="mt-1 h-4 w-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                          type="text"
+                          placeholder="Поиск клиента..."
+                          value={clientSearch}
+                          onChange={(e) => setClientSearch(e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                         />
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-900">
-                            {procedure.fields.Name}
+                        {clientSearch && (
+                          <div className="mt-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg divide-y divide-gray-200 shadow-md">
+                            {filteredClients.length === 0 ? (
+                              <div className="px-4 py-3 text-gray-500 text-sm bg-white">
+                                Клиенты не найдены
+                              </div>
+                            ) : (
+                              filteredClients.map((client) => (
+                                <button
+                                  key={client.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedClientId(client.id)
+                                    setClientSearch('')
+                                  }}
+                                  className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors bg-white font-medium text-sm text-gray-900"
+                                >
+                                  {formatClientDisplay(client)}
+                                </button>
+                              ))
+                            )}
                           </div>
-                          <div className="text-sm text-gray-600 mt-1">
-                            {duration} • ₪{price}
-                          </div>
-                        </div>
-                      </label>
-                    )
-                  })}
-                </div>
-              </div>
+                        )}
+                      </>
+                    )}
 
-              {/* Duration and Price */}
-              {selectedProcedureIds.length > 0 && (
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <div className="grid grid-cols-2 gap-4">
+                    {/* Show selected client */}
+                    {selectedClientId && selectedClient && (
+                      <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+                        <div className="text-sm font-medium text-blue-900">
+                          {formatClientDisplay(selectedClient)}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedClientId('')
+                            setClientSearch('')
+                            setIsCreatingNewClient(false)
+                          }}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-bold"
+                        >
+                          Изменить
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Procedures */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Процедуры <span className="text-red-500">*</span>
+                    </label>
+                    <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                      {procedures.map((procedure) => {
+                        const duration = procedure.fields.Duration
+                          ? formatDuration(procedure.fields.Duration)
+                          : '0:00'
+                        const price = Math.round(procedure.fields.Price || 0)
+                        const isSelected = selectedProcedureIds.includes(procedure.id)
+
+                        return (
+                          <label
+                            key={procedure.id}
+                            className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${isSelected ? 'bg-purple-50 border border-purple-200' : 'bg-white border border-gray-200 hover:bg-gray-50'
+                              }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleProcedure(procedure.id)}
+                              className="mt-1 h-4 w-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900">
+                                {procedure.fields.Name}
+                              </div>
+                              <div className="text-sm text-gray-600 mt-1">
+                                {duration} • ₪{price}
+                              </div>
+                            </div>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Duration and Price (Price only for clients) */}
+              {(isMeTime || selectedProcedureIds.length > 0) && (
+                <div className={`${isMeTime ? 'bg-sky-50 border-sky-200' : 'bg-purple-50 border-purple-200'} border rounded-lg p-4`}>
+                  <div className={`grid ${isMeTime ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
                     {/* Editable Duration */}
                     <div>
-                      <label className="block text-sm text-purple-700 font-medium mb-2">
-                        Длительность визита
+                      <label className={`block text-sm ${isMeTime ? 'text-sky-700' : 'text-purple-700'} font-medium mb-2`}>
+                        Длительность
                       </label>
                       <input
                         type="text"
@@ -727,23 +785,25 @@ export default function BookingForm({
                           }
                         }}
                         placeholder="0:00"
-                        className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none text-lg font-bold text-purple-900"
+                        className={`w-full px-3 py-2 border ${isMeTime ? 'border-sky-300 focus:ring-sky-500 focus:border-sky-500 text-sky-900' : 'border-purple-300 focus:ring-purple-500 focus:border-purple-500 text-purple-900'} rounded-lg focus:ring-2 outline-none text-lg font-bold`}
                       />
-                      {isDurationManuallyEdited && customDuration !== totalMinutes && totalMinutes > 0 && (
+                      {isDurationManuallyEdited && !isMeTime && customDuration !== totalMinutes && totalMinutes > 0 && (
                         <div className="text-xs text-purple-600 mt-1">
                           Рассчитано из процедур: {formatMinutesToHHMM(totalMinutes)}
                         </div>
                       )}
                     </div>
-                    {/* Total Price */}
-                    <div>
-                      <div className="text-sm text-purple-700 font-medium mb-2">
-                        Общая стоимость
+                    {/* Total Price (Only Client) */}
+                    {!isMeTime && (
+                      <div>
+                        <div className="text-sm text-purple-700 font-medium mb-2">
+                          Общая стоимость
+                        </div>
+                        <div className="text-2xl font-bold text-purple-900">
+                          ₪{totalPrice}
+                        </div>
                       </div>
-                      <div className="text-2xl font-bold text-purple-900">
-                        ₪{totalPrice}
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               )}

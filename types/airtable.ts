@@ -40,6 +40,8 @@ export interface BookingFields {
   Total_Duration?: number // formula field, in seconds
   Total_Price?: number // formula field
   Token_Used?: boolean
+  Is_Me_Time?: boolean
+  Me_Time_Title?: string
 }
 
 export type Booking = AirtableRecord<BookingFields>
@@ -75,11 +77,13 @@ export interface BookingData {
 
 // Create/Update types (without computed fields)
 export interface CreateBookingData {
-  Client: string[] // Array with single client record ID
-  Procedures: string[] // Array of procedure record IDs
+  Client?: string[] // Array with single client record ID
+  Procedures?: string[] // Array of procedure record IDs
   Date: string // ISO 8601 datetime string
   Duration_Castomed?: number // Custom duration in seconds
   Token_Used?: boolean
+  Is_Me_Time?: boolean
+  Me_Time_Title?: string
 }
 
 export interface UpdateBookingData {
@@ -88,6 +92,8 @@ export interface UpdateBookingData {
   Date?: string
   Duration_Castomed?: number // Custom duration in seconds
   Token_Used?: boolean
+  Is_Me_Time?: boolean
+  Me_Time_Title?: string
 }
 
 // Booking data as returned from Airtable with lookup fields
@@ -101,6 +107,8 @@ export interface BookingFromAirtable {
     Total_Price?: number
     Phone_Number?: string[] // Lookup field from Client table
     Booking_Number_New?: number
+    Is_Me_Time?: boolean
+    Me_Time_Title?: string
   }
 }
 
@@ -114,4 +122,6 @@ export interface BookingDisplay {
   totalDuration: string
   totalPrice: number
   bookingNumber: number
+  isMeTime: boolean
+  meTimeTitle?: string
 }

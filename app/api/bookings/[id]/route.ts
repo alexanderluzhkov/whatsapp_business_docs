@@ -33,10 +33,10 @@ export async function PUT(
 ) {
   try {
     const body = await request.json()
-    const { clientId, procedureIds, date, customDuration } = body
+    const { clientId, procedureIds, date, customDuration, isMeTime, meTimeTitle } = body
 
-    // Validate input
-    if (!clientId || !procedureIds || !Array.isArray(procedureIds) || procedureIds.length === 0 || !date) {
+    // Validate input (skip clientId/procedureIds if it's Me Time)
+    if (!isMeTime && (!clientId || !procedureIds || !Array.isArray(procedureIds) || procedureIds.length === 0 || !date)) {
       return NextResponse.json(
         {
           success: false,
@@ -46,16 +46,29 @@ export async function PUT(
       )
     }
 
+    if (isMeTime && !date) {
+      return NextResponse.json({ success: false, error: 'Дата обязательна' }, { status: 400 })
+    }
+
     // Create update data for Airtable
     const updateData: UpdateBookingData = {
-      Client: [clientId],
-      Procedures: procedureIds,
       Date: date,
+    }
+
+    if (!isMeTime) {
+      updateData.Client = [clientId]
+      updateData.Procedures = procedureIds
     }
 
     // Add custom duration if provided (in seconds)
     if (customDuration && typeof customDuration === 'number') {
       updateData.Duration_Castomed = customDuration
+    }
+
+    // Add Me Time fields
+    if (typeof isMeTime === 'boolean') {
+      updateData.Is_Me_Time = isMeTime
+      updateData.Me_Time_Title = meTimeTitle || 'Личное время'
     }
 
     // Update booking in Airtable
