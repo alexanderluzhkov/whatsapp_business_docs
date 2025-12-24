@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { formatDateLong } from '@/lib/calendar-utils'
 import type { Client, Procedure, BookingDisplay } from '@/types/airtable'
 
@@ -122,6 +122,36 @@ export default function BookingForm({
     loadData()
   }, [isOpen])
 
+  // Parse duration string (e.g., "1:30" -> 90 minutes)
+  const parseDuration = (duration: string): number => {
+    const parts = duration.split(':')
+    const hours = parseInt(parts[0] || '0', 10)
+    const minutes = parseInt(parts[1] || '0', 10)
+    return hours * 60 + minutes
+  }
+
+  // Calculate total duration in minutes
+  const calculateTotalMinutes = useCallback((): number => {
+    return selectedProcedureIds.reduce((total, procId) => {
+      const procedure = procedures.find((p) => p.id === procId)
+      if (procedure?.fields.Duration) {
+        return total + Math.floor(procedure.fields.Duration / 60)
+      }
+      return total
+    }, 0)
+  }, [selectedProcedureIds, procedures])
+
+  // Calculate total price
+  const calculateTotalPrice = useCallback((): number => {
+    return selectedProcedureIds.reduce((total, procId) => {
+      const procedure = procedures.find((p) => p.id === procId)
+      if (procedure?.fields.Price) {
+        return total + procedure.fields.Price
+      }
+      return total
+    }, 0)
+  }, [selectedProcedureIds, procedures])
+
   // Update editable date/time when props change (without resetting form)
   useEffect(() => {
     if (isOpen) {
@@ -179,7 +209,7 @@ export default function BookingForm({
       setError(null)
       setConflictWarning(null)
     }
-  }, [isOpen, editMode, initialClientId, initialProcedureIds, initialCustomDuration])
+  }, [isOpen, editMode, initialClientId, initialProcedureIds, initialCustomDuration, initialIsMeTime, initialMeTimeTitle])
 
   useEffect(() => {
     if (selectedProcedureIds.length > 0 && procedures.length > 0 && !isMeTime) {
@@ -189,7 +219,7 @@ export default function BookingForm({
         setCustomDuration(calculatedMinutes)
       }
     }
-  }, [selectedProcedureIds, procedures, isDurationManuallyEdited, isMeTime])
+  }, [selectedProcedureIds, procedures, isDurationManuallyEdited, isMeTime, calculateTotalMinutes])
 
   // Set default 60 min for Me Time when switched on
   useEffect(() => {
@@ -237,15 +267,7 @@ export default function BookingForm({
     } else {
       setConflictWarning(null)
     }
-  }, [selectedProcedureIds, customDuration, editableDate, editableTime, existingBookings, editMode, bookingId])
-
-  // Parse duration string (e.g., "1:30" -> 90 minutes)
-  const parseDuration = (duration: string): number => {
-    const parts = duration.split(':')
-    const hours = parseInt(parts[0] || '0', 10)
-    const minutes = parseInt(parts[1] || '0', 10)
-    return hours * 60 + minutes
-  }
+  }, [selectedProcedureIds, customDuration, editableDate, editableTime, existingBookings, editMode, bookingId, parseDuration])
 
   // Convert seconds to HH:MM format
   const formatDuration = (seconds: number): string => {
@@ -267,28 +289,6 @@ export default function BookingForm({
     const hours = parseInt(parts[0] || '0', 10)
     const minutes = parseInt(parts[1] || '0', 10)
     return hours * 60 + minutes
-  }
-
-  // Calculate total duration in minutes
-  const calculateTotalMinutes = (): number => {
-    return selectedProcedureIds.reduce((total, procId) => {
-      const procedure = procedures.find((p) => p.id === procId)
-      if (procedure?.fields.Duration) {
-        return total + Math.floor(procedure.fields.Duration / 60)
-      }
-      return total
-    }, 0)
-  }
-
-  // Calculate total price
-  const calculateTotalPrice = (): number => {
-    return selectedProcedureIds.reduce((total, procId) => {
-      const procedure = procedures.find((p) => p.id === procId)
-      if (procedure?.fields.Price) {
-        return total + procedure.fields.Price
-      }
-      return total
-    }, 0)
   }
 
   // Filter clients based on search

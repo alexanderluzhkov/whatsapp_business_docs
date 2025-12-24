@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import {
   formatDate,
   formatDateLong,
@@ -61,7 +61,7 @@ export default function CalendarPage() {
   }, [viewMode])
 
   // Fetch bookings for the current visible calendar month
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     setIsLoading(true)
     setError(null)
 
@@ -123,11 +123,11 @@ export default function CalendarPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [calendarDays])
 
   useEffect(() => {
     fetchBookings()
-  }, [calendarDays])
+  }, [fetchBookings])
 
   // Navigation handlers
   const handlePrevious = () => {

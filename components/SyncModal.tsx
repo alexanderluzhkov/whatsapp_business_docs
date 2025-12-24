@@ -85,8 +85,8 @@ export default function SyncModal({ isOpen, onClose }: SyncModalProps) {
                                 <li>Настройки → <span className="font-bold">Календарь</span> → Учетные записи</li>
                                 <li>Новая уч. запись → Другое</li>
                                 <li><span className="font-bold">Подписной календарь</span></li>
-                                <li>Вставьте ссылку и нажмите "Далее"</li>
-                                <li>Если будет ошибка SSL — <span className="font-bold text-red-600">нажмите "Продолжить"</span> или используйте webcal</li>
+                                <li>Вставьте ссылку и нажмите &quot;Далее&quot;</li>
+                                <li>Если будет ошибка SSL — <span className="font-bold text-red-600">нажмите &quot;Продолжить&quot;</span> или используйте webcal</li>
                             </ol>
                         </div>
 
