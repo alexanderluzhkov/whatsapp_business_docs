@@ -18,6 +18,7 @@ import type { BookingDisplay } from '@/types/airtable'
 import BookingCard from '@/components/BookingCard'
 import BookingDetailsModal from '@/components/BookingDetailsModal'
 import BookingForm from '@/components/BookingForm'
+import SyncModal from '@/components/SyncModal'
 
 export default function CalendarPage() {
   // Navigation state
@@ -34,6 +35,7 @@ export default function CalendarPage() {
   // Modal state
   const [selectedBooking, setSelectedBooking] = useState<BookingDisplay | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
 
   // Booking form state
   const [selectedSlot, setSelectedSlot] = useState<{ date: Date; time: string } | null>(null)
@@ -59,71 +61,71 @@ export default function CalendarPage() {
   }, [viewMode])
 
   // Fetch bookings for the current visible calendar month
-  useEffect(() => {
-    const fetchBookings = async () => {
-      setIsLoading(true)
-      setError(null)
+  const fetchBookings = async () => {
+    setIsLoading(true)
+    setError(null)
 
-      try {
-        // Calculate the range for the entire month grid
-        const gridStart = calendarDays[0]
-        const gridEnd = calendarDays[calendarDays.length - 1]
+    try {
+      // Calculate the range for the entire month grid
+      const gridStart = calendarDays[0]
+      const gridEnd = calendarDays[calendarDays.length - 1]
 
-        const startStr = gridStart.toISOString().split('T')[0]
-        const endStr = gridEnd.toISOString().split('T')[0]
+      const startStr = gridStart.toISOString().split('T')[0]
+      const endStr = gridEnd.toISOString().split('T')[0]
 
-        // Fetch bookings from API route
-        const response = await fetch(`/api/bookings?startDate=${startStr}&endDate=${endStr}`)
-        const data = await response.json()
+      // Fetch bookings from API route
+      const response = await fetch(`/api/bookings?startDate=${startStr}&endDate=${endStr}`)
+      const data = await response.json()
 
-        if (!data.success) {
-          throw new Error(data.error || 'Failed to fetch bookings')
-        }
-
-        const allBookings = data.bookings
-        setRawBookings(allBookings)
-
-        // Parse bookings
-        const parsedBookings: BookingDisplay[] = allBookings
-          .map((booking: any) => {
-            const fields = booking.fields
-            if (!fields.Date) return null
-
-            // Get duration
-            let totalDuration = '0:00'
-            if (fields.Duration_Castomed) {
-              const totalSeconds = fields.Duration_Castomed
-              const hours = Math.floor(totalSeconds / 3600)
-              const minutes = Math.floor((totalSeconds % 3600) / 60)
-              totalDuration = `${hours}:${minutes.toString().padStart(2, '0')}`
-            } else if (fields.Total_Duration) {
-              totalDuration = fields.Total_Duration
-            }
-
-            return {
-              id: booking.id,
-              clientName: fields['Name (from Client)']?.[0] || 'Unknown',
-              clientPhone: fields['Phone_Number']?.[0] || 'Not specified',
-              date: fields.Date,
-              procedures: fields['Name (from Procedures)'] || [],
-              totalDuration,
-              totalPrice: fields.Total_Price || 0,
-              bookingNumber: fields.Booking_Number_New || 0,
-              isMeTime: !!fields.Is_Me_Time,
-              meTimeTitle: fields.Me_Time_Title,
-            }
-          })
-          .filter((booking: BookingDisplay | null): booking is BookingDisplay => booking !== null)
-
-        setBookings(parsedBookings)
-      } catch (err) {
-        console.error('Error fetching bookings:', err)
-        setError('Не удалось загрузить записи')
-      } finally {
-        setIsLoading(false)
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch bookings')
       }
-    }
 
+      const allBookings = data.bookings
+      setRawBookings(allBookings)
+
+      // Parse bookings
+      const parsedBookings: BookingDisplay[] = allBookings
+        .map((booking: any) => {
+          const fields = booking.fields
+          if (!fields.Date) return null
+
+          // Get duration
+          let totalDuration = '0:00'
+          if (fields.Duration_Castomed) {
+            const totalSeconds = fields.Duration_Castomed
+            const hours = Math.floor(totalSeconds / 3600)
+            const minutes = Math.floor((totalSeconds % 3600) / 60)
+            totalDuration = `${hours}:${minutes.toString().padStart(2, '0')}`
+          } else if (fields.Total_Duration) {
+            totalDuration = fields.Total_Duration
+          }
+
+          return {
+            id: booking.id,
+            clientName: fields['Name (from Client)']?.[0] || 'Unknown',
+            clientPhone: fields['Phone_Number']?.[0] || 'Not specified',
+            date: fields.Date,
+            procedures: fields['Name (from Procedures)'] || [],
+            totalDuration,
+            totalPrice: fields.Total_Price || 0,
+            bookingNumber: fields.Booking_Number_New || 0,
+            isMeTime: !!fields.Is_Me_Time,
+            meTimeTitle: fields.Me_Time_Title,
+          }
+        })
+        .filter((booking: BookingDisplay | null): booking is BookingDisplay => booking !== null)
+
+      setBookings(parsedBookings)
+    } catch (err) {
+      console.error('Error fetching bookings:', err)
+      setError('Не удалось загрузить записи')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
     fetchBookings()
   }, [calendarDays])
 
@@ -240,6 +242,13 @@ export default function CalendarPage() {
                 className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors"
               >
                 Сегодня
+              </button>
+              <button
+                onClick={() => setIsSyncModalOpen(true)}
+                className="p-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                title="Синхронизировать с телефоном"
+              >
+                📅
               </button>
             </div>
           </div>
@@ -383,26 +392,31 @@ export default function CalendarPage() {
         onEdit={handleEditBooking}
       />
 
-      {selectedSlot && (
-        <BookingForm
-          isOpen={isBookingFormOpen}
-          onClose={() => { setIsBookingFormOpen(false); setSelectedSlot(null); setEditBookingData(null); }}
-          selectedDate={selectedSlot.date}
-          selectedTime={selectedSlot.time}
-          onBookingCreated={() => {
-            // Trigger a re-fetch of bookings
-            setViewDate(new Date(viewDate))
-          }}
-          existingBookings={bookings}
-          editMode={!!editBookingData}
-          bookingId={editBookingData?.id}
-          initialClientId={editBookingData?.clientId}
-          initialProcedureIds={editBookingData?.procedureIds}
-          initialCustomDuration={editBookingData?.customDuration}
-          initialIsMeTime={editBookingData?.isMeTime}
-          initialMeTimeTitle={editBookingData?.meTimeTitle}
-        />
-      )}
+      {/* Booking Form */}
+      <BookingForm
+        isOpen={isBookingFormOpen}
+        onClose={() => {
+          setIsBookingFormOpen(false)
+          setEditBookingData(null)
+        }}
+        selectedDate={selectedSlot?.date || new Date()}
+        selectedTime={selectedSlot?.time || '09:00'}
+        onBookingCreated={fetchBookings}
+        existingBookings={bookings}
+        editMode={!!editBookingData}
+        bookingId={editBookingData?.id}
+        initialClientId={editBookingData?.clientId}
+        initialProcedureIds={editBookingData?.procedureIds}
+        initialCustomDuration={editBookingData?.customDuration}
+        initialIsMeTime={editBookingData?.isMeTime}
+        initialMeTimeTitle={editBookingData?.meTimeTitle}
+      />
+
+      {/* Sync Modal */}
+      <SyncModal
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+      />
     </div>
   )
 }
