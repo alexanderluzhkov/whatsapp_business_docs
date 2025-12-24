@@ -104,7 +104,21 @@ export async function GET(request: Request) {
                 return
             }
 
-            const durationSeconds = fields.Total_Duration || 3600
+            // Parse duration - handle both seconds (from Duration_Castomed) and string format (from Total_Duration)
+            let durationSeconds = 3600 // Default 1 hour
+
+            if (fields.Duration_Castomed) {
+                // Custom duration is stored in seconds
+                durationSeconds = fields.Duration_Castomed
+            } else if (fields.Total_Duration) {
+                // Total_Duration comes from Airtable as string "H:MM" format
+                const totalDuration = String(fields.Total_Duration)
+                const parts = totalDuration.split(':')
+                const hours = parseInt(parts[0] || '0', 10)
+                const minutes = parseInt(parts[1] || '0', 10)
+                durationSeconds = hours * 3600 + minutes * 60
+            }
+
             const endTime = new Date(startTime.getTime() + durationSeconds * 1000)
 
             let summary = ''
