@@ -14,6 +14,19 @@ export async function GET(request: Request) {
             return new Response('Unauthorized', { status: 401 })
         }
 
+        // Fast path for HEAD requests (often used for verification)
+        if (request.method === 'HEAD') {
+            return new Response(null, {
+                status: 200,
+                headers: {
+                    'Content-Type': 'text/calendar; charset=utf-8',
+                    'Content-Disposition': 'attachment; filename="bookings.ics"',
+                    'Cache-Control': 'no-store, no-cache, must-revalidate',
+                    'X-PUBLISHED-TTL': 'PT15M',
+                },
+            })
+        }
+
         // Fetch data from Airtable
         const now = new Date()
         const startDate = new Date(now)
@@ -125,8 +138,8 @@ export async function GET(request: Request) {
         return new Response(icsLines.join('\r\n'), {
             headers: {
                 'Content-Type': 'text/calendar; charset=utf-8',
-                'Content-Disposition': 'inline; filename="bookings.ics"',
-                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+                'Content-Disposition': 'attachment; filename="bookings.ics"',
+                'Cache-Control': 'no-store, no-cache, must-revalidate',
             },
         })
     } catch (error) {

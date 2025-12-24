@@ -85,10 +85,22 @@ export default function SyncModal({ isOpen, onClose }: SyncModalProps) {
                                 <li>Настройки → <span className="font-bold">Календарь</span> → Учетные записи</li>
                                 <li>Новая уч. запись → Другое</li>
                                 <li><span className="font-bold">Подписной календарь</span></li>
-                                <li>Нажмите на поле &quot;Сервер&quot; и вставьте ссылку</li>
-                                <li>Нажмите &quot;Далее&quot;, затем <span className="font-bold">&quot;Сохранить&quot;</span></li>
-                                <li>Если будет предупреждение SSL — нажмите <span className="font-bold text-blue-600">&quot;Продолжить&quot;</span></li>
+                                <li>Вставьте ссылку в поле &quot;Сервер&quot; → Далее</li>
+                                <li className="bg-blue-100/50 p-1 rounded">
+                                    <span className="font-bold text-blue-600">Важно:</span> Проверка может занять до <span className="font-bold">30 секунд</span>. Не закрывайте окно!
+                                </li>
+                                <li>Если ошибка SSL — нажмите <span className="font-bold text-blue-600">&quot;Продолжить&quot;</span></li>
+                                <li>На экране Подписка — нажмите <span className="font-bold text-blue-600">&quot;Сохранить&quot;</span> (справа вверху)</li>
+                                <li>Если будет повторный вопрос &quot;Продолжить?&quot; — нажмите <span className="font-bold text-blue-600">&quot;Сохранить&quot;</span> еще раз</li>
                             </ol>
+                        </div>
+
+                        <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-start gap-3">
+                            <span className="text-lg">⚠️</span>
+                            <div className="text-[10px] text-amber-800 leading-tight">
+                                <p className="font-bold mb-1">Если пишет &quot;Не удается проверить&quot;:</p>
+                                <p>Просто нажмите <span className="font-bold text-amber-900">&quot;Продолжить&quot;</span> и <span className="font-bold text-amber-900">&quot;Сохранить&quot;</span>. iOS иногда капризничает при проверке, но календарь все равно будет работать.</p>
+                            </div>
                         </div>
 
                         <button
