@@ -94,7 +94,7 @@ export async function GET(request: Request) {
             headers: {
                 'Content-Type': 'text/calendar; charset=utf-8',
                 'Content-Disposition': 'attachment; filename="bookings.ics"',
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
             },
         })
     } catch (error) {

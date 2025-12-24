@@ -13,9 +13,10 @@ export default function SyncModal({ isOpen, onClose }: SyncModalProps) {
     if (!isOpen) return null
 
     const syncUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/api/calendar/feed?token=nail-master-personal-sync`
+    const webcalUrl = syncUrl.replace(/^https?:\/\//, 'webcal://')
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(syncUrl)
+    const handleCopy = (url: string) => {
+        navigator.clipboard.writeText(url)
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
     }
@@ -32,7 +33,7 @@ export default function SyncModal({ isOpen, onClose }: SyncModalProps) {
                 <div className="p-6">
                     <div className="flex justify-between items-center mb-6">
                         <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                            <span>📅</span> Синхронизация с iPhone
+                            <span>📅</span> Синхронизация
                         </h2>
                         <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -42,36 +43,50 @@ export default function SyncModal({ isOpen, onClose }: SyncModalProps) {
                     </div>
 
                     <div className="space-y-6">
-                        <div>
-                            <p className="text-sm text-gray-600 mb-3">
-                                Скопируйте эту ссылку и добавьте её в настройки iPhone, чтобы видеть записи на экране блокировки:
-                            </p>
-                            <div className="flex gap-2">
-                                <input
-                                    autoFocus
-                                    readOnly
-                                    value={syncUrl}
-                                    className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-500 font-mono"
-                                />
-                                <button
-                                    onClick={handleCopy}
-                                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-blue-600 text-white'
-                                        }`}
-                                >
-                                    {copied ? '✅' : 'Copy'}
-                                </button>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Основная ссылка</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        readOnly
+                                        value={syncUrl}
+                                        className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-[10px] text-gray-500 font-mono overflow-x-auto"
+                                    />
+                                    <button
+                                        onClick={() => handleCopy(syncUrl)}
+                                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex-none ${copied ? 'bg-green-100 text-green-700' : 'bg-blue-600 text-white'}`}
+                                    >
+                                        {copied ? '✅' : 'Copy'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Если ошибка SSL (webcal)</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        readOnly
+                                        value={webcalUrl}
+                                        className="flex-1 px-3 py-2 bg-sky-50 border border-sky-100 rounded-lg text-[10px] text-sky-600 font-mono overflow-x-auto"
+                                    />
+                                    <button
+                                        onClick={() => handleCopy(webcalUrl)}
+                                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex-none ${copied ? 'bg-green-100 text-green-700' : 'bg-sky-600 text-white'}`}
+                                    >
+                                        {copied ? '✅' : 'Copy'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
                         <div className="bg-blue-50 rounded-xl p-4">
-                            <h3 className="text-sm font-bold text-blue-900 mb-2">Как настроить на iPhone:</h3>
-                            <ol className="text-xs text-blue-800 space-y-2 list-decimal list-inside">
-                                <li>Откройте настройки iPhone</li>
-                                <li>Перейдите в <span className="font-bold">Календарь</span></li>
-                                <li>Нажмите <span className="font-bold">Учетные записи</span></li>
-                                <li>Выберите <span className="font-bold">Новая учетная запись</span></li>
-                                <li>Нажмите <span className="font-bold">Другое</span> → <span className="font-bold">Подписной календарь</span></li>
-                                <li>Вставьте скопированную ссылку</li>
+                            <h3 className="text-sm font-bold text-blue-900 mb-2">Настройка iPhone:</h3>
+                            <ol className="text-[11px] text-blue-800 space-y-1.5 list-decimal list-inside">
+                                <li>Настройки → <span className="font-bold">Календарь</span> → Учетные записи</li>
+                                <li>Новая уч. запись → Другое</li>
+                                <li><span className="font-bold">Подписной календарь</span></li>
+                                <li>Вставьте ссылку и нажмите "Далее"</li>
+                                <li>Если будет ошибка SSL — <span className="font-bold text-red-600">нажмите "Продолжить"</span> или используйте webcal</li>
                             </ol>
                         </div>
 
