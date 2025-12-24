@@ -9,18 +9,17 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url)
         const token = searchParams.get('token')
 
-        // Simple token check (can be improved)
+        // Simple token check
         if (!token || token !== 'nail-master-personal-sync') {
             return new Response('Unauthorized', { status: 401 })
         }
 
         // Fetch data from Airtable
-        // Fetch a 4-month window (1 month back, 3 months forward)
         const now = new Date()
         const startDate = new Date(now)
-        startDate.setMonth(now.getMonth() - 1)
+        startDate.setMonth(now.getMonth() - 2) // 2 months back
         const endDate = new Date(now)
-        endDate.setMonth(now.getMonth() + 3)
+        endDate.setMonth(now.getMonth() + 4) // 4 months forward
 
         const [bookings, clients, procedures] = await Promise.all([
             getBookings(startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]),
@@ -28,7 +27,7 @@ export async function GET(request: Request) {
             getAllProcedures(),
         ])
 
-        // Helper functions for iCal formatting
+        // iCal formatting helpers
         const formatDateICS = (dateStr: string) => {
             return new Date(dateStr).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
         }
@@ -37,9 +36,19 @@ export async function GET(request: Request) {
             return str.replace(/[,;\\]/g, (match) => `\\${match}`).replace(/\n/g, '\\n')
         }
 
+        const foldLine = (line: string) => {
+            const parts = []
+            while (line.length > 75) {
+                parts.push(line.slice(0, 75))
+                line = ' ' + line.slice(75)
+            }
+            parts.push(line)
+            return parts.join('\r\n')
+        }
+
         const host = request.headers.get('host') || 'nailmaster.vercel.app'
 
-        let icsContent = [
+        let icsLines = [
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
             'PRODID:-//Nail Master//Booking Calendar//EN',
@@ -48,15 +57,33 @@ export async function GET(request: Request) {
             'X-WR-CALNAME:Nail Master Bookings',
             'X-WR-CALDESC:Расписание записей мастера маникюра',
             'X-WR-TIMEZONE:Asia/Jerusalem',
-            'X-PUBLISHED-TTL:PT1H',
-            'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
-        ].join('\r\n') + '\r\n'
+            'X-PUBLISHED-TTL:PT15M',
+            'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'BEGIN:VTIMEZONE',
+            'TZID:Asia/Jerusalem',
+            'X-LIC-LOCATION:Asia/Jerusalem',
+            'BEGIN:DAYLIGHT',
+            'TZOFFSETFROM:+0200',
+            'TZOFFSETTO:+0300',
+            'TZNAME:IDT',
+            'DTSTART:19700327T020000',
+            'RRULE:FREQ=YEARLY;BYDAY=-1FR;BYMONTH=3',
+            'END:DAYLIGHT',
+            'BEGIN:STANDARD',
+            'TZOFFSETFROM:+0300',
+            'TZOFFSETTO:+0200',
+            'TZNAME:IST',
+            'DTSTART:19701025T020000',
+            'RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10',
+            'END:STANDARD',
+            'END:VTIMEZONE',
+        ]
 
         bookings.forEach((booking: Booking) => {
-            const { fields, id } = booking
+            const { fields, id, createdTime } = booking
             const isMeTime = fields.Is_Me_Time === true
             const date = fields.Date || ''
-            const durationSeconds = fields.Total_Duration || 3600 // Default 1h
+            const durationSeconds = fields.Total_Duration || 3600
 
             const startTime = new Date(date)
             const endTime = new Date(startTime.getTime() + durationSeconds * 1000)
@@ -73,35 +100,33 @@ export async function GET(request: Request) {
                 const clientPhone = client?.fields.Phone_Number || ''
 
                 const bookingProcedures = (fields.Procedures || [])
-                    .map(id => procedures.find(p => p.id === id)?.fields.Name)
+                    .map(procId => procedures.find(p => p.id === procId)?.fields.Name)
                     .filter(Boolean)
                     .join(', ')
 
-                summary = `💅 ${clientName} (${bookingProcedures})`
-                description = `Клиент: ${clientName}\\nТелефон: ${clientPhone}\\nПроцедуры: ${bookingProcedures}\\nЦена: ₪${fields.Total_Price || 0}`
+                summary = `💅 ${clientName}${bookingProcedures ? ` (${bookingProcedures})` : ''}`
+                description = `Клиент: ${clientName}\\nТелефон: ${clientPhone}${bookingProcedures ? `\\nПроцедуры: ${bookingProcedures}` : ''}\\nЦена: ₪${fields.Total_Price || 0}`
             }
 
-            icsContent += [
-                'BEGIN:VEVENT',
-                `UID:${id}@${host}`,
-                `DTSTAMP:${formatDateICS(new Date().toISOString())}`,
-                `DTSTART:${formatDateICS(startTime.toISOString())}`,
-                `DTEND:${formatDateICS(endTime.toISOString())}`,
-                `SUMMARY:${escapeICS(summary)}`,
-                `DESCRIPTION:${escapeICS(description)}`,
-                'TRANSP:OPAQUE',
-                'STATUS:CONFIRMED',
-                'END:VEVENT',
-            ].join('\r\n') + '\r\n'
+            icsLines.push('BEGIN:VEVENT')
+            icsLines.push(`UID:booking-${id}@${host}`)
+            icsLines.push(`DTSTAMP:${formatDateICS(createdTime || new Date().toISOString())}`)
+            icsLines.push(`DTSTART;TZID=Asia/Jerusalem:${formatDateICS(startTime.toISOString()).replace('Z', '')}`)
+            icsLines.push(`DTEND;TZID=Asia/Jerusalem:${formatDateICS(endTime.toISOString()).replace('Z', '')}`)
+            icsLines.push(foldLine(`SUMMARY:${escapeICS(summary)}`))
+            icsLines.push(foldLine(`DESCRIPTION:${escapeICS(description)}`))
+            icsLines.push('TRANSP:OPAQUE')
+            icsLines.push('STATUS:CONFIRMED')
+            icsLines.push('END:VEVENT')
         })
 
-        icsContent += 'END:VCALENDAR'
+        icsLines.push('END:VCALENDAR')
 
-        return new Response(icsContent, {
+        return new Response(icsLines.join('\r\n'), {
             headers: {
                 'Content-Type': 'text/calendar; charset=utf-8',
-                'Content-Disposition': 'attachment; filename="bookings.ics"',
-                'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+                'Content-Disposition': 'inline; filename="bookings.ics"',
+                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
             },
         })
     } catch (error) {
