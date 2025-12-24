@@ -509,7 +509,7 @@ export default function BookingForm({
     >
       {/* Modal Content */}
       <div
-        className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-scaleIn"
+        className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-scaleIn"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -529,308 +529,311 @@ export default function BookingForm({
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
-          {/* Loading State */}
-          {isLoadingData && (
-            <div className="text-center py-8">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div>
-              <p className="mt-2 text-gray-600">Загрузка данных...</p>
-            </div>
-          )}
-
-          {/* Form Fields */}
-          {!isLoadingData && (
-            <>
-              {/* Date & Time (Editable) */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Дата и время
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <input
-                      type="date"
-                      value={editableDate}
-                      onChange={(e) => setEditableDate(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <input
-                      type="time"
-                      value={editableTime}
-                      onChange={(e) => setEditableTime(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    />
-                  </div>
-                </div>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+            {/* Loading State */}
+            {isLoadingData && (
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div>
+                <p className="mt-2 text-gray-600">Загрузка данных...</p>
               </div>
+            )}
 
-              {/* Booking Type Toggle */}
-              <div className="flex p-1 bg-gray-100 rounded-lg">
-                <button
-                  type="button"
-                  onClick={() => setIsMeTime(false)}
-                  className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${!isMeTime ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                >
-                  Клиент
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsMeTime(true)}
-                  className={`flex-1 py-1 text-sm font-medium rounded-md transition-all ${isMeTime ? 'bg-white shadow-sm text-sky-600' : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                >
-                  Личное время
-                </button>
-              </div>
-
-              {isMeTime ? (
-                /* Me Time Title */
+            {/* Form Fields */}
+            {!isLoadingData && (
+              <>
+                {/* Date & Time (Editable) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Что планируете? <span className="text-red-500">*</span>
+                    Дата и время
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Например: Обед, Обучение..."
-                    value={meTimeTitle}
-                    onChange={(e) => setMeTimeTitle(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none"
-                  />
-                </div>
-              ) : (
-                <>
-                  {/* Client Selection */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Клиент <span className="text-red-500">*</span>
-                      </label>
-                      {!selectedClientId && !isCreatingNewClient && (
-                        <button
-                          type="button"
-                          onClick={() => setIsCreatingNewClient(true)}
-                          className="text-xs font-semibold text-blue-600 hover:text-blue-700"
-                        >
-                          + Новый клиент
-                        </button>
-                      )}
-                      {isCreatingNewClient && !selectedClientId && (
-                        <button
-                          type="button"
-                          onClick={() => setIsCreatingNewClient(false)}
-                          className="text-xs font-semibold text-gray-500 hover:text-gray-600"
-                        >
-                          Отмена
-                        </button>
-                      )}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <input
+                        type="date"
+                        value={editableDate}
+                        onChange={(e) => setEditableDate(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
                     </div>
+                    <div>
+                      <input
+                        type="time"
+                        value={editableTime}
+                        onChange={(e) => setEditableTime(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
 
-                    {/* New Client Form */}
-                    {isCreatingNewClient && !selectedClientId && (
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
-                        <div className="grid grid-cols-2 gap-3">
-                          <input
-                            type="text"
-                            placeholder="Имя *"
-                            value={newClientFirstName}
-                            onChange={(e) => setNewClientFirstName(e.target.value)}
-                            className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                          <input
-                            type="text"
-                            placeholder="Фамилия"
-                            value={newClientLastName}
-                            onChange={(e) => setNewClientLastName(e.target.value)}
-                            className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <input
-                            type="tel"
-                            placeholder="Телефон *"
-                            value={newClientPhone}
-                            onChange={(e) => setNewClientPhone(e.target.value)}
-                            className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
+                {/* Booking Type Toggle */}
+                <div className="flex p-1 bg-gray-100 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setIsMeTime(false)}
+                    className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${!isMeTime ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                  >
+                    Клиент
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsMeTime(true)}
+                    className={`flex-1 py-1 text-sm font-medium rounded-md transition-all ${isMeTime ? 'bg-white shadow-sm text-sky-600' : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                  >
+                    Личное время
+                  </button>
+                </div>
+
+                {isMeTime ? (
+                  /* Me Time Title */
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Что планируете? <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Например: Обед, Обучение..."
+                      value={meTimeTitle}
+                      onChange={(e) => setMeTimeTitle(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    {/* Client Selection */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Клиент <span className="text-red-500">*</span>
+                        </label>
+                        {!selectedClientId && !isCreatingNewClient && (
                           <button
                             type="button"
-                            onClick={handleCreateClient}
-                            disabled={isSaving}
-                            className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                            onClick={() => setIsCreatingNewClient(true)}
+                            className="text-xs font-semibold text-blue-600 hover:text-blue-700"
                           >
-                            OK
+                            + Новый клиент
                           </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Existing Client Search */}
-                    {!selectedClientId && !isCreatingNewClient && (
-                      <>
-                        <input
-                          type="text"
-                          placeholder="Поиск клиента..."
-                          value={clientSearch}
-                          onChange={(e) => setClientSearch(e.target.value)}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                        />
-                        {clientSearch && (
-                          <div className="mt-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg divide-y divide-gray-200 shadow-md">
-                            {filteredClients.length === 0 ? (
-                              <div className="px-4 py-3 text-gray-500 text-sm bg-white">
-                                Клиенты не найдены
-                              </div>
-                            ) : (
-                              filteredClients.map((client) => (
-                                <button
-                                  key={client.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedClientId(client.id)
-                                    setClientSearch('')
-                                  }}
-                                  className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors bg-white font-medium text-sm text-gray-900"
-                                >
-                                  {formatClientDisplay(client)}
-                                </button>
-                              ))
-                            )}
-                          </div>
                         )}
-                      </>
-                    )}
-
-                    {/* Show selected client */}
-                    {selectedClientId && selectedClient && (
-                      <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
-                        <div className="text-sm font-medium text-blue-900">
-                          {formatClientDisplay(selectedClient)}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedClientId('')
-                            setClientSearch('')
-                            setIsCreatingNewClient(false)
-                          }}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-bold"
-                        >
-                          Изменить
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Procedures */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Процедуры <span className="text-red-500">*</span>
-                    </label>
-                    <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3">
-                      {procedures.map((procedure) => {
-                        const duration = procedure.fields.Duration
-                          ? formatDuration(procedure.fields.Duration)
-                          : '0:00'
-                        const price = Math.round(procedure.fields.Price || 0)
-                        const isSelected = selectedProcedureIds.includes(procedure.id)
-
-                        return (
-                          <label
-                            key={procedure.id}
-                            className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${isSelected ? 'bg-purple-50 border border-purple-200' : 'bg-white border border-gray-200 hover:bg-gray-50'
-                              }`}
+                        {isCreatingNewClient && !selectedClientId && (
+                          <button
+                            type="button"
+                            onClick={() => setIsCreatingNewClient(false)}
+                            className="text-xs font-semibold text-gray-500 hover:text-gray-600"
                           >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleProcedure(procedure.id)}
-                              className="mt-1 h-4 w-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                            />
-                            <div className="flex-1">
-                              <div className="font-medium text-gray-900">
-                                {procedure.fields.Name}
-                              </div>
-                              <div className="text-sm text-gray-600 mt-1">
-                                {duration} • ₪{price}
-                              </div>
-                            </div>
-                          </label>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </>
-              )}
+                            Отмена
+                          </button>
+                        )}
+                      </div>
 
-              {/* Duration and Price (Price only for clients) */}
-              {(isMeTime || selectedProcedureIds.length > 0) && (
-                <div className={`${isMeTime ? 'bg-sky-50 border-sky-200' : 'bg-purple-50 border-purple-200'} border rounded-lg p-4`}>
-                  <div className={`grid ${isMeTime ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
-                    {/* Editable Duration */}
-                    <div>
-                      <label className={`block text-sm ${isMeTime ? 'text-sky-700' : 'text-purple-700'} font-medium mb-2`}>
-                        Длительность
-                      </label>
-                      <input
-                        type="text"
-                        value={formatMinutesToHHMM(customDuration)}
-                        onChange={(e) => {
-                          const minutes = parseHHMMToMinutes(e.target.value)
-                          if (!isNaN(minutes)) {
-                            setCustomDuration(minutes)
-                            setIsDurationManuallyEdited(true)
-                          }
-                        }}
-                        placeholder="0:00"
-                        className={`w-full px-3 py-2 border ${isMeTime ? 'border-sky-300 focus:ring-sky-500 focus:border-sky-500 text-sky-900' : 'border-purple-300 focus:ring-purple-500 focus:border-purple-500 text-purple-900'} rounded-lg focus:ring-2 outline-none text-lg font-bold`}
-                      />
-                      {isDurationManuallyEdited && !isMeTime && customDuration !== totalMinutes && totalMinutes > 0 && (
-                        <div className="text-xs text-purple-600 mt-1">
-                          Рассчитано из процедур: {formatMinutesToHHMM(totalMinutes)}
+                      {/* New Client Form */}
+                      {isCreatingNewClient && !selectedClientId && (
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            <input
+                              type="text"
+                              placeholder="Имя *"
+                              value={newClientFirstName}
+                              onChange={(e) => setNewClientFirstName(e.target.value)}
+                              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Фамилия"
+                              value={newClientLastName}
+                              onChange={(e) => setNewClientLastName(e.target.value)}
+                              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <input
+                              type="tel"
+                              placeholder="Телефон *"
+                              value={newClientPhone}
+                              onChange={(e) => setNewClientPhone(e.target.value)}
+                              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleCreateClient}
+                              disabled={isSaving}
+                              className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                            >
+                              OK
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Existing Client Search */}
+                      {!selectedClientId && !isCreatingNewClient && (
+                        <>
+                          <input
+                            type="text"
+                            placeholder="Поиск клиента..."
+                            value={clientSearch}
+                            onChange={(e) => setClientSearch(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          />
+                          {clientSearch && (
+                            <div className="mt-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg divide-y divide-gray-200 shadow-md">
+                              {filteredClients.length === 0 ? (
+                                <div className="px-4 py-3 text-gray-500 text-sm bg-white">
+                                  Клиенты не найдены
+                                </div>
+                              ) : (
+                                filteredClients.map((client) => (
+                                  <button
+                                    key={client.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedClientId(client.id)
+                                      setClientSearch('')
+                                    }}
+                                    className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors bg-white font-medium text-sm text-gray-900"
+                                  >
+                                    {formatClientDisplay(client)}
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* Show selected client */}
+                      {selectedClientId && selectedClient && (
+                        <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+                          <div className="text-sm font-medium text-blue-900">
+                            {formatClientDisplay(selectedClient)}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedClientId('')
+                              setClientSearch('')
+                              setIsCreatingNewClient(false)
+                            }}
+                            className="text-blue-600 hover:text-blue-800 text-sm font-bold"
+                          >
+                            Изменить
+                          </button>
                         </div>
                       )}
                     </div>
-                    {/* Total Price (Only Client) */}
-                    {!isMeTime && (
-                      <div>
-                        <div className="text-sm text-purple-700 font-medium mb-2">
-                          Общая стоимость
-                        </div>
-                        <div className="text-2xl font-bold text-purple-900">
-                          ₪{totalPrice}
-                        </div>
+
+                    {/* Procedures */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Процедуры <span className="text-red-500">*</span>
+                      </label>
+                      <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                        {procedures.map((procedure) => {
+                          const duration = procedure.fields.Duration
+                            ? formatDuration(procedure.fields.Duration)
+                            : '0:00'
+                          const price = Math.round(procedure.fields.Price || 0)
+                          const isSelected = selectedProcedureIds.includes(procedure.id)
+
+                          return (
+                            <label
+                              key={procedure.id}
+                              className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${isSelected ? 'bg-purple-50 border border-purple-200' : 'bg-white border border-gray-200 hover:bg-gray-50'
+                                }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleProcedure(procedure.id)}
+                                className="mt-1 h-4 w-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                              />
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-900">
+                                  {procedure.fields.Name}
+                                </div>
+                                <div className="text-sm text-gray-600 mt-1">
+                                  {duration} • ₪{price}
+                                </div>
+                              </div>
+                            </label>
+                          )
+                        })}
                       </div>
-                    )}
-                  </div>
-                </div>
-              )}
+                    </div>
+                  </>
+                )}
 
-              {/* Conflict Warning */}
-              {conflictWarning && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex items-start gap-2">
-                    <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    <p className="text-sm text-yellow-800">{conflictWarning}</p>
+                {/* Duration and Price (Price only for clients) */}
+                {(isMeTime || selectedProcedureIds.length > 0) && (
+                  <div className={`${isMeTime ? 'bg-sky-50 border-sky-200' : 'bg-purple-50 border-purple-200'} border rounded-lg p-4`}>
+                    <div className={`grid ${isMeTime ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
+                      {/* Editable Duration */}
+                      <div>
+                        <label className={`block text-sm ${isMeTime ? 'text-sky-700' : 'text-purple-700'} font-medium mb-2`}>
+                          Длительность
+                        </label>
+                        <input
+                          type="text"
+                          value={formatMinutesToHHMM(customDuration)}
+                          onChange={(e) => {
+                            const minutes = parseHHMMToMinutes(e.target.value)
+                            if (!isNaN(minutes)) {
+                              setCustomDuration(minutes)
+                              setIsDurationManuallyEdited(true)
+                            }
+                          }}
+                          placeholder="0:00"
+                          className={`w-full px-3 py-2 border ${isMeTime ? 'border-sky-300 focus:ring-sky-500 focus:border-sky-500 text-sky-900' : 'border-purple-300 focus:ring-purple-500 focus:border-purple-500 text-purple-900'} rounded-lg focus:ring-2 outline-none text-lg font-bold`}
+                        />
+                        {isDurationManuallyEdited && !isMeTime && customDuration !== totalMinutes && totalMinutes > 0 && (
+                          <div className="text-xs text-purple-600 mt-1">
+                            Рассчитано из процедур: {formatMinutesToHHMM(totalMinutes)}
+                          </div>
+                        )}
+                      </div>
+                      {/* Total Price (Only Client) */}
+                      {!isMeTime && (
+                        <div>
+                          <div className="text-sm text-purple-700 font-medium mb-2">
+                            Общая стоимость
+                          </div>
+                          <div className="text-2xl font-bold text-purple-900">
+                            ₪{totalPrice}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Error Message */}
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <p className="text-sm text-red-800">{error}</p>
-                </div>
-              )}
-            </>
-          )}
+                {/* Conflict Warning */}
+                {conflictWarning && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-start gap-2">
+                      <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <p className="text-sm text-yellow-800">{conflictWarning}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Error Message */}
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-sm text-red-800">{error}</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
 
           {/* Footer Buttons */}
-          <div className="flex gap-3 pt-4 border-t border-gray-200">
+          <div className={`sticky bottom-0 px-6 py-4 gap-3 border-t flex z-10 ${isMeTime ? 'bg-sky-50 border-sky-200' : 'bg-gray-50 border-gray-200'
+            }`}>
             {editMode && (
               <button
                 type="button"
