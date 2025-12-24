@@ -32,8 +32,8 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { clientId, procedureIds, date, customDuration, isMeTime, meTimeTitle } = body
 
-    // Validate input
-    if (!clientId || !procedureIds || !Array.isArray(procedureIds) || procedureIds.length === 0 || !date) {
+    // Validate input (skip clientId/procedureIds if it's Me Time)
+    if (!isMeTime && (!clientId || !procedureIds || !Array.isArray(procedureIds) || procedureIds.length === 0 || !date)) {
       return NextResponse.json(
         {
           success: false,
@@ -43,11 +43,18 @@ export async function POST(request: Request) {
       )
     }
 
+    if (isMeTime && !date) {
+      return NextResponse.json({ success: false, error: 'Дата обязательна' }, { status: 400 })
+    }
+
     // Create booking data for Airtable
     const bookingData: CreateBookingData = {
-      Client: [clientId],
-      Procedures: procedureIds,
       Date: date,
+    }
+
+    if (!isMeTime) {
+      bookingData.Client = [clientId]
+      bookingData.Procedures = procedureIds
     }
 
     // Add custom duration if provided (in seconds)
