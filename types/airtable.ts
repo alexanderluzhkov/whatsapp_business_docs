@@ -37,9 +37,10 @@ export interface BookingFields {
   Client?: string[] // Array of record IDs (link to Clients)
   Procedures?: string[] // Array of record IDs (link to Procedures)
   Date?: string // ISO 8601 datetime string
-  Total_Duration?: number // formula field, in seconds
+  Total_Duration?: string | number // formula field, can be "H:MM" string or seconds number
   Total_Price?: number // formula field
   Token_Used?: boolean
+  Duration_Castomed?: number // custom duration override, in seconds
   Is_Me_Time?: boolean
   Me_Time_Title?: string
 }
