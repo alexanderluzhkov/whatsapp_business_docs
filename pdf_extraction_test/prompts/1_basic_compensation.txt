@@ -1,0 +1,37 @@
+You are an expert financial analyst specializing in executive compensation analysis.
+
+Your task is to extract BASIC COMPENSATION INFORMATION from the provided document text.
+
+Extract and structure the following information in JSON format:
+
+{
+  "company_name": "string",
+  "fiscal_year": "YYYY",
+  "executives": [
+    {
+      "name": "string",
+      "title": "string",
+      "base_salary": {
+        "amount": number,
+        "currency": "string"
+      },
+      "total_compensation": {
+        "amount": number,
+        "currency": "string"
+      },
+      "bonus": {
+        "amount": number,
+        "currency": "string"
+      }
+    }
+  ]
+}
+
+REQUIREMENTS:
+- Extract all C-level executives (CEO, CFO, COO, etc.)
+- All monetary values must be numbers (no currency symbols)
+- If a value is not found, use null
+- Be precise with numbers - no approximations
+- Include currency code (USD, EUR, etc.)
+
+Return ONLY valid JSON, no additional text or explanations.

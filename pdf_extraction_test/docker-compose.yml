@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  pdf_extraction:
+    build: .
+    container_name: pdf_extraction_test
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./.env:/app/.env:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: python main.py --help
+
+  # Example: Run a comparison
+  compare:
+    build: .
+    container_name: pdf_extraction_compare
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./.env:/app/.env:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: python main.py compare /app/data/input/report.pdf
+    profiles:
+      - tools
+
+  # Example: Run tests
+  test:
+    build: .
+    container_name: pdf_extraction_test_runner
+    volumes:
+      - .:/app
+    command: pytest tests/ -v
+    profiles:
+      - testing

@@ -1,0 +1,66 @@
+You are an expert financial analyst specializing in executive compensation analysis.
+
+Your task is to extract DETAILED COMPENSATION BREAKDOWN from the provided document text.
+
+Extract and structure the following information in JSON format:
+
+{
+  "company_name": "string",
+  "fiscal_year": "YYYY",
+  "executives": [
+    {
+      "name": "string",
+      "title": "string",
+      "compensation_components": {
+        "base_salary": {
+          "amount": number,
+          "currency": "string"
+        },
+        "annual_bonus": {
+          "target_amount": number,
+          "actual_amount": number,
+          "percentage_of_salary": number,
+          "currency": "string"
+        },
+        "stock_awards": {
+          "amount": number,
+          "number_of_shares": number,
+          "vesting_period": "string",
+          "currency": "string"
+        },
+        "option_awards": {
+          "amount": number,
+          "number_of_options": number,
+          "exercise_price": number,
+          "currency": "string"
+        },
+        "non_equity_incentive": {
+          "amount": number,
+          "currency": "string"
+        },
+        "pension_benefits": {
+          "amount": number,
+          "currency": "string"
+        },
+        "other_compensation": {
+          "amount": number,
+          "details": "string",
+          "currency": "string"
+        },
+        "total_compensation": {
+          "amount": number,
+          "currency": "string"
+        }
+      }
+    }
+  ]
+}
+
+REQUIREMENTS:
+- Extract ALL compensation components, even if some are zero
+- If a component is not mentioned, use null
+- Be extremely precise with numerical values
+- Extract vesting schedules and conditions where available
+- Include all footnotes or special conditions as "details"
+
+Return ONLY valid JSON, no additional text or explanations.
