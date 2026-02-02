@@ -1,0 +1,478 @@
+{
+  "name": "LLM Output to Google Sheets Export",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-200, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Transform LLM Output to Google Sheets rows\n * Input: parsed LLM response with semantic_changes structure\n * Output: individual rows with sheetName for routing\n */\n\nfunction getPriority(verificationStatus) {\n  switch (verificationStatus) {\n    case 'contradicts_document': return 'HIGH';\n    case 'not_found': return 'MEDIUM';\n    default: return 'LOW';\n  }\n}\n\nconst inputItems = $input.all();\nconst output = [];\n\nfor (const item of inputItems) {\n  const data = item.json || item;\n  const company = data.company || '';\n  const period = data.comparison_period || '';\n  const processedAt = data.processedAt || new Date().toISOString();\n\n  let totalChanges = 0;\n  let highPriority = 0;\n  let mediumPriority = 0;\n  let lowPriority = 0;\n\n  const semanticChanges = data.semantic_changes || {};\n\n  // Process Plans\n  const plans = semanticChanges.plans || [];\n  for (const plan of plans) {\n    const planName = plan.plan_name || '';\n    for (const change of (plan.changes || [])) {\n      const priority = getPriority(change.verification_status);\n      totalChanges++;\n      if (priority === 'HIGH') highPriority++;\n      else if (priority === 'MEDIUM') mediumPriority++;\n      else lowPriority++;\n\n      output.push({\n        json: {\n          sheetName: 'Changes_Review',\n          Company: company,\n          Period: period,\n          Priority: priority,\n          Section: 'Plans',\n          Plan_Name: planName,\n          Instrument_Name: '',\n          KPI_Name: '',\n          Tranche: '',\n          Field: change.field || '',\n          Change_Type: change.change_type || '',\n          Old_Value: String(change.old_value || ''),\n          New_Value: String(change.new_value || ''),\n          Verification_Status: change.verification_status || '',\n          Citation: change.citation || '',\n          Doc_Source: change.citation_source || '',\n          Agent_Notes: change.notes || ''\n        }\n      });\n    }\n  }\n\n  // Process KPI Applications\n  const kpiApplications = semanticChanges.kpi_applications || [];\n  for (const kpiApp of kpiApplications) {\n    const planName = kpiApp.plan_name || '';\n    const instrumentName = kpiApp.instrument_name || '';\n    for (const change of (kpiApp.changes || [])) {\n      const priority = getPriority(change.verification_status);\n      totalChanges++;\n      if (priority === 'HIGH') highPriority++;\n      else if (priority === 'MEDIUM') mediumPriority++;\n      else lowPriority++;\n\n      output.push({\n        json: {\n          sheetName: 'Changes_Review',\n          Company: company,\n          Period: period,\n          Priority: priority,\n          Section: 'KPI_Applications',\n          Plan_Name: planName,\n          Instrument_Name: instrumentName,\n          KPI_Name: change.kpi_name || '',\n          Tranche: change.tranche || '',\n          Field: change.field || change.application_comment || '',\n          Change_Type: change.change_type || '',\n          Old_Value: String(change.old_value || ''),\n          New_Value: String(change.new_value || ''),\n          Verification_Status: change.verification_status || '',\n          Citation: change.citation || '',\n          Doc_Source: change.citation_source || '',\n          Agent_Notes: change.notes || ''\n        }\n      });\n    }\n  }\n\n  // Process Instruments\n  const instruments = semanticChanges.instruments || [];\n  for (const instrument of instruments) {\n    for (const change of (instrument.changes || [])) {\n      const priority = getPriority(change.verification_status);\n      totalChanges++;\n      if (priority === 'HIGH') highPriority++;\n      else if (priority === 'MEDIUM') mediumPriority++;\n      else lowPriority++;\n\n      output.push({\n        json: {\n          sheetName: 'Changes_Review',\n          Company: company,\n          Period: period,\n          Priority: priority,\n          Section: 'Instruments',\n          Plan_Name: '',\n          Instrument_Name: instrument.instrument_name || '',\n          KPI_Name: '',\n          Tranche: '',\n          Field: change.field || '',\n          Change_Type: change.change_type || '',\n          Old_Value: String(change.old_value || ''),\n          New_Value: String(change.new_value || ''),\n          Verification_Status: change.verification_status || '',\n          Citation: change.citation || '',\n          Doc_Source: change.citation_source || '',\n          Agent_Notes: change.notes || ''\n        }\n      });\n    }\n  }\n\n  // Process Eligibility\n  const eligibility = semanticChanges.eligibility || [];\n  for (const elig of eligibility) {\n    for (const change of (elig.changes || [])) {\n      const priority = getPriority(change.verification_status);\n      totalChanges++;\n      if (priority === 'HIGH') highPriority++;\n      else if (priority === 'MEDIUM') mediumPriority++;\n      else lowPriority++;\n\n      output.push({\n        json: {\n          sheetName: 'Changes_Review',\n          Company: company,\n          Period: period,\n          Priority: priority,\n          Section: 'Eligibility',\n          Plan_Name: elig.plan_name || '',\n          Instrument_Name: '',\n          KPI_Name: '',\n          Tranche: '',\n          Field: change.field || '',\n          Change_Type: change.change_type || '',\n          Old_Value: String(change.old_value || ''),\n          New_Value: String(change.new_value || ''),\n          Verification_Status: change.verification_status || '',\n          Citation: change.citation || '',\n          Doc_Source: change.citation_source || '',\n          Agent_Notes: change.notes || ''\n        }\n      });\n    }\n  }\n\n  // Process Leaver Rules\n  const leaverRules = semanticChanges.leaver_rules || [];\n  for (const leaver of leaverRules) {\n    for (const change of (leaver.changes || [])) {\n      const priority = getPriority(change.verification_status);\n      totalChanges++;\n      if (priority === 'HIGH') highPriority++;\n      else if (priority === 'MEDIUM') mediumPriority++;\n      else lowPriority++;\n\n      output.push({\n        json: {\n          sheetName: 'Changes_Review',\n          Company: company,\n          Period: period,\n          Priority: priority,\n          Section: 'Leaver_Rules',\n          Plan_Name: leaver.plan_name || '',\n          Instrument_Name: '',\n          KPI_Name: '',\n          Tranche: '',\n          Field: change.field || '',\n          Change_Type: change.change_type || '',\n          Old_Value: String(change.old_value || ''),\n          New_Value: String(change.new_value || ''),\n          Verification_Status: change.verification_status || '',\n          Citation: change.citation || '',\n          Doc_Source: change.citation_source || '',\n          Agent_Notes: change.notes || ''\n        }\n      });\n    }\n  }\n\n  // Process SB Adjustments\n  const sbAdjustments = semanticChanges.sb_adjustments || [];\n  for (const adj of sbAdjustments) {\n    for (const change of (adj.changes || [])) {\n      const priority = getPriority(change.verification_status);\n      totalChanges++;\n      if (priority === 'HIGH') highPriority++;\n      else if (priority === 'MEDIUM') mediumPriority++;\n      else lowPriority++;\n\n      output.push({\n        json: {\n          sheetName: 'Changes_Review',\n          Company: company,\n          Period: period,\n          Priority: priority,\n          Section: 'SB_Adjustments',\n          Plan_Name: adj.plan_name || '',\n          Instrument_Name: '',\n          KPI_Name: '',\n          Tranche: '',\n          Field: change.field || '',\n          Change_Type: change.change_type || '',\n          Old_Value: String(change.old_value || ''),\n          New_Value: String(change.new_value || ''),\n          Verification_Status: change.verification_status || '',\n          Citation: change.citation || '',\n          Doc_Source: change.citation_source || '',\n          Agent_Notes: change.notes || ''\n        }\n      });\n    }\n  }\n\n  // Data Quality Issues\n  const dqIssues = data.data_quality_issues || [];\n  for (const issue of dqIssues) {\n    output.push({\n      json: {\n        sheetName: 'Data_Quality_Issues',\n        Company: company,\n        Section: issue.section || '',\n        Record_ID: issue.record_identifier || '',\n        Issue_Type: issue.issue_type || '',\n        Description: issue.description || '',\n        Citation: issue.citation || '',\n        Doc_Source: issue.citation_source || ''\n      }\n    });\n  }\n\n  // Excluded Changes\n  const excluded = data.excluded_changes_summary || {};\n  const excludedDetails = excluded.details || [];\n  const excludedCategories = excluded.categories || [];\n\n  for (const detail of excludedDetails) {\n    output.push({\n      json: {\n        sheetName: 'Excluded_Changes',\n        Company: company,\n        Category: excludedCategories.join(', '),\n        Detail: detail\n      }\n    });\n  }\n\n  // Agent Feedback\n  const uncertainties = data.agent_uncertainties || [];\n  for (const uncertainty of uncertainties) {\n    output.push({\n      json: {\n        sheetName: 'Agent_Feedback',\n        Company: company,\n        Feedback_Type: 'Uncertainty',\n        Description: uncertainty\n      }\n    });\n  }\n\n  const suggestions = data.agent_suggestions || [];\n  for (const suggestion of suggestions) {\n    output.push({\n      json: {\n        sheetName: 'Agent_Feedback',\n        Company: company,\n        Feedback_Type: 'Suggestion',\n        Description: suggestion\n      }\n    });\n  }\n\n  const taxonomyFeedback = data.taxonomy_feedback || {};\n  const classificationUncertain = taxonomyFeedback.classification_uncertain || [];\n  for (const ci of classificationUncertain) {\n    output.push({\n      json: {\n        sheetName: 'Agent_Feedback',\n        Company: company,\n        Feedback_Type: 'Classification_Issue',\n        Description: (ci.change_description || '') + ': ' + (ci.uncertainty || '')\n      }\n    });\n  }\n\n  // Summary\n  output.push({\n    json: {\n      sheetName: 'Summary',\n      Company: company,\n      Period: period,\n      Processing_Date: processedAt.split('T')[0],\n      Total_Changes: totalChanges,\n      High_Priority: highPriority,\n      Medium_Priority: mediumPriority,\n      Low_Priority: lowPriority,\n      Data_Quality_Issues: dqIssues.length,\n      Uncertainties: uncertainties.length\n    }\n  });\n}\n\n// Sort output\nconst sheetOrder = { 'Summary': 0, 'Changes_Review': 1, 'Data_Quality_Issues': 2, 'Excluded_Changes': 3, 'Agent_Feedback': 4 };\nconst priorityOrder = { 'HIGH': 0, 'MEDIUM': 1, 'LOW': 2 };\n\noutput.sort((a, b) => {\n  const sheetA = sheetOrder[a.json.sheetName] ?? 99;\n  const sheetB = sheetOrder[b.json.sheetName] ?? 99;\n  if (sheetA !== sheetB) return sheetA - sheetB;\n  if (a.json.sheetName === 'Changes_Review' && b.json.sheetName === 'Changes_Review') {\n    return (priorityOrder[a.json.Priority] ?? 99) - (priorityOrder[b.json.Priority] ?? 99);\n  }\n  return 0;\n});\n\nreturn output;"
+      },
+      "id": "code-001",
+      "name": "Transform to Sheets Format",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [40, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-summary",
+              "leftValue": "={{ $json.sheetName }}",
+              "rightValue": "Summary",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-summary",
+      "name": "IF Summary",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [280, 120]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-changes",
+              "leftValue": "={{ $json.sheetName }}",
+              "rightValue": "Changes_Review",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-changes",
+      "name": "IF Changes_Review",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-dq",
+              "leftValue": "={{ $json.sheetName }}",
+              "rightValue": "Data_Quality_Issues",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-dataquality",
+      "name": "IF Data_Quality",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [280, 480]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-excluded",
+              "leftValue": "={{ $json.sheetName }}",
+              "rightValue": "Excluded_Changes",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-excluded",
+      "name": "IF Excluded",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [280, 660]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-feedback",
+              "leftValue": "={{ $json.sheetName }}",
+              "rightValue": "Agent_Feedback",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-feedback",
+      "name": "IF Agent_Feedback",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [280, 840]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "14EwVAioWmcpsibyqoCptN-LYSc7-RNwpzIRRVBcwQo4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Summary"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Company": "={{ $json.Company }}",
+            "Period": "={{ $json.Period }}",
+            "Processing_Date": "={{ $json.Processing_Date }}",
+            "Total_Changes": "={{ $json.Total_Changes }}",
+            "High_Priority": "={{ $json.High_Priority }}",
+            "Medium_Priority": "={{ $json.Medium_Priority }}",
+            "Low_Priority": "={{ $json.Low_Priority }}",
+            "Data_Quality_Issues": "={{ $json.Data_Quality_Issues }}",
+            "Uncertainties": "={{ $json.Uncertainties }}"
+          },
+          "schema": [
+            {"id": "Company", "displayName": "Company", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Period", "displayName": "Period", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Processing_Date", "displayName": "Processing_Date", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Total_Changes", "displayName": "Total_Changes", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "High_Priority", "displayName": "High_Priority", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Medium_Priority", "displayName": "Medium_Priority", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Low_Priority", "displayName": "Low_Priority", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Data_Quality_Issues", "displayName": "Data_Quality_Issues", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Uncertainties", "displayName": "Uncertainties", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false}
+          ]
+        },
+        "options": {}
+      },
+      "id": "sheets-summary",
+      "name": "Write Summary",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [520, 120],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "wLpleeKhEBG7CORV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "14EwVAioWmcpsibyqoCptN-LYSc7-RNwpzIRRVBcwQo4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Changes_Review"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Company": "={{ $json.Company }}",
+            "Period": "={{ $json.Period }}",
+            "Priority": "={{ $json.Priority }}",
+            "Section": "={{ $json.Section }}",
+            "Plan_Name": "={{ $json.Plan_Name }}",
+            "Instrument_Name": "={{ $json.Instrument_Name }}",
+            "KPI_Name": "={{ $json.KPI_Name }}",
+            "Tranche": "={{ $json.Tranche }}",
+            "Field": "={{ $json.Field }}",
+            "Change_Type": "={{ $json.Change_Type }}",
+            "Old_Value": "={{ $json.Old_Value }}",
+            "New_Value": "={{ $json.New_Value }}",
+            "Verification_Status": "={{ $json.Verification_Status }}",
+            "Citation": "={{ $json.Citation }}",
+            "Doc_Source": "={{ $json.Doc_Source }}",
+            "Agent_Notes": "={{ $json.Agent_Notes }}"
+          },
+          "schema": [
+            {"id": "Company", "displayName": "Company", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Period", "displayName": "Period", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Priority", "displayName": "Priority", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Section", "displayName": "Section", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Plan_Name", "displayName": "Plan_Name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Instrument_Name", "displayName": "Instrument_Name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "KPI_Name", "displayName": "KPI_Name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Tranche", "displayName": "Tranche", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Field", "displayName": "Field", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Change_Type", "displayName": "Change_Type", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Old_Value", "displayName": "Old_Value", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "New_Value", "displayName": "New_Value", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Verification_Status", "displayName": "Verification_Status", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Citation", "displayName": "Citation", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Doc_Source", "displayName": "Doc_Source", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Agent_Notes", "displayName": "Agent_Notes", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false}
+          ]
+        },
+        "options": {}
+      },
+      "id": "sheets-changes",
+      "name": "Write Changes_Review",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [520, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "wLpleeKhEBG7CORV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "14EwVAioWmcpsibyqoCptN-LYSc7-RNwpzIRRVBcwQo4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Data_Quality_Issues"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Company": "={{ $json.Company }}",
+            "Section": "={{ $json.Section }}",
+            "Record_ID": "={{ $json.Record_ID }}",
+            "Issue_Type": "={{ $json.Issue_Type }}",
+            "Description": "={{ $json.Description }}",
+            "Citation": "={{ $json.Citation }}",
+            "Doc_Source": "={{ $json.Doc_Source }}"
+          },
+          "schema": [
+            {"id": "Company", "displayName": "Company", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Section", "displayName": "Section", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Record_ID", "displayName": "Record_ID", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Issue_Type", "displayName": "Issue_Type", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Description", "displayName": "Description", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Citation", "displayName": "Citation", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Doc_Source", "displayName": "Doc_Source", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false}
+          ]
+        },
+        "options": {}
+      },
+      "id": "sheets-dataquality",
+      "name": "Write Data_Quality",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [520, 480],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "wLpleeKhEBG7CORV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "14EwVAioWmcpsibyqoCptN-LYSc7-RNwpzIRRVBcwQo4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Excluded_Changes"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Company": "={{ $json.Company }}",
+            "Category": "={{ $json.Category }}",
+            "Detail": "={{ $json.Detail }}"
+          },
+          "schema": [
+            {"id": "Company", "displayName": "Company", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Category", "displayName": "Category", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Detail", "displayName": "Detail", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false}
+          ]
+        },
+        "options": {}
+      },
+      "id": "sheets-excluded",
+      "name": "Write Excluded",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [520, 660],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "wLpleeKhEBG7CORV",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "14EwVAioWmcpsibyqoCptN-LYSc7-RNwpzIRRVBcwQo4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Agent_Feedback"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Company": "={{ $json.Company }}",
+            "Feedback_Type": "={{ $json.Feedback_Type }}",
+            "Description": "={{ $json.Description }}"
+          },
+          "schema": [
+            {"id": "Company", "displayName": "Company", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "Feedback_Type", "displayName": "Feedback_Type", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "Description", "displayName": "Description", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false}
+          ]
+        },
+        "options": {}
+      },
+      "id": "sheets-feedback",
+      "name": "Write Agent_Feedback",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [520, 840],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "wLpleeKhEBG7CORV",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {"node": "Transform to Sheets Format", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Transform to Sheets Format": {
+      "main": [
+        [
+          {"node": "IF Summary", "type": "main", "index": 0},
+          {"node": "IF Changes_Review", "type": "main", "index": 0},
+          {"node": "IF Data_Quality", "type": "main", "index": 0},
+          {"node": "IF Excluded", "type": "main", "index": 0},
+          {"node": "IF Agent_Feedback", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "IF Summary": {
+      "main": [
+        [{"node": "Write Summary", "type": "main", "index": 0}],
+        []
+      ]
+    },
+    "IF Changes_Review": {
+      "main": [
+        [{"node": "Write Changes_Review", "type": "main", "index": 0}],
+        []
+      ]
+    },
+    "IF Data_Quality": {
+      "main": [
+        [{"node": "Write Data_Quality", "type": "main", "index": 0}],
+        []
+      ]
+    },
+    "IF Excluded": {
+      "main": [
+        [{"node": "Write Excluded", "type": "main", "index": 0}],
+        []
+      ]
+    },
+    "IF Agent_Feedback": {
+      "main": [
+        [{"node": "Write Agent_Feedback", "type": "main", "index": 0}],
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ac6468f5c28a3d68ec0441bcd2a5615eecd3e585d9be0a85a683b9eaa639c2d5"
+  },
+  "active": false
+}
