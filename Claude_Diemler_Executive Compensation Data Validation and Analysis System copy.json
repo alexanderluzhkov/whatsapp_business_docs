@@ -1,0 +1,492 @@
+{
+  "name": "Claude_Diemler_Executive Compensation Data Validation and Analysis System copy",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "ef34f566-f44e-4d34-b8e6-ad16f1094f5c",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -672,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "companyName",
+              "value": "Schaeffler",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "companyId",
+              "value": "20",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "promptTemplate",
+              "value": "# Compensation Data Comparison & Verification Prompt v3  ## Context  You are analyzing executive compensation data for a company. The data comes from a structured database that tracks variable compensation plans (STB - Short-Term Bonus, LTB - Long-Term Bonus) and their components.  **Data source:** Two JSON files extracted from the compensation database: - `[YEAR-1]_data.json` – baseline (assumed correct) - `[YEAR]_data.json` – to be compared and verified  **Verification documents ([YEAR] only):** - Remuneration Report (RR) – annual disclosure of actual compensation - Remuneration System (RS) – policy document describing plan rules  **Core assumption:** If plan_id remains unchanged between years, the remuneration system structure is assumed stable. Focus on detecting data entry errors and interpreting semantic changes within stable structures.  **Your goal:** Identify semantic changes in compensation approach and verify them against source documents. This helps human reviewers focus only on meaningful changes and catch data entry errors.  ---  ## Task  1. **Compare** all sections of [YEAR-1] and [YEAR] JSON files 2. **Identify** semantic changes (changes that affect compensation policy/structure) 3. **Exclude** non-semantic changes (annual updates, actual results) 4. **Verify** each semantic change against [YEAR] documents 5. **Detect** data errors where JSON contradicts documents or contains obvious errors 6. **Provide** short citations (up to 5 words) for document search  ---  ## JSON Sections to Compare  | Section | Description | Semantic Relevance | |---------|-------------|-------------------| | variable_plan | Plan-level parameters (caps, adjustments, weights) | HIGH | | variable_instrument | Instrument details (vesting, settlement, caps) | HIGH | | variable_kpi_application | KPI targets, metrics, weights per year/tranche | HIGH | | variable_eligibility | Who participates in each plan | MEDIUM | | variable_leaver | Rules for good/bad leavers | HIGH | | sb_adj_targets | Supervisory Board discretionary adjustment rules | HIGH | | variable_target_achievement | Actual achievement results | LOW (usually non-semantic) |  ---  ## Matching Rules  How to identify \"the same\" record across years:  | Section | Matching Key | Special Rules | |---------|--------------|---------------| | variable_plan | `plan_id` | - | | variable_instrument | `plan_id` + `instrument_id` | - | | variable_kpi_application (STB) | `plan_id` + `kpi_id` + `starting_fiscal_year` + **semantic matching** | See ESG sub-target rules below | | variable_kpi_application (LTB) | `plan_id` + `kpi_id` + `starting_fiscal_year` + `ending_fiscal_year` | New tranches are separate instances | | variable_eligibility | `plan_id` + `eligible` | - | | variable_leaver | `plan_id` + `case` | - | | sb_adj_targets | `plan_id` + `target` | - | | variable_target_achievement | `plan_id` + `ending_fiscal_year` | - |  ### Special Matching Rules: ESG Sub-Targets  **Problem:** ESG KPIs can have multiple sub-targets (e.g., \"Fresh water reduction\" + \"Occupational safety\") that may change individually between years. The `application_comment` field structure may differ between years: - YEAR-1: `application_comment` = None, sub-targets only in `kpi_comment` or `target_corridor` - YEAR: `application_comment` = populated with specific sub-target name  **Solution - Semantic Proximity Matching:**  When matching ESG/sustainability KPIs (typically `kpi_type` = \"Sustainability\"):  1. **First, match by explicit fields:**    - Same `plan_id` + `kpi_id` + `starting_fiscal_year`  2. **Then, for sub-target identification:**    - **If `application_comment` exists in YEAR:**      - Try to match with YEAR-1 `application_comment` (if populated)      - If YEAR-1 `application_comment` is None/null, extract semantic content from:        - `target_corridor_min/target/max` fields (look for metric keywords)        - `kpi_comment` field (may list multiple sub-targets)        - **Match by semantic theme:**      - Environmental metrics: water, energy, emissions, waste, resources      - Social metrics: safety (LTIR, accident rate), diversity, training      - Governance metrics: compliance, ethics, board composition        - **If semantic theme matches → same sub-target (check for changes)**    - **If semantic theme differs → sub_target_replacement**  3. **Example:**    ```    YEAR-1: kpi_id=25788, application_comment=None,             target_corridor=\"fresh water withdrawal >= 150,000 m3\"            → Theme: Environmental (water)        YEAR:   kpi_id=25788, application_comment=\"Increase energy efficiency\",            target_corridor=\"Energy efficiency >= 20 GWh\"            → Theme: Environmental (energy)        Result: Same ESG KPI position, different environmental metric → sub_target_replacement    ```  4. **Occupational safety example:**    ```    YEAR-1: kpi_id=25788, application_comment=None,            target_corridor=\"LTIR <= 2.6\"            → Theme: Social (safety)        YEAR:   kpi_id=25788, application_comment=\"Improve occupational safety\",            target_corridor=\"LTIR <= 2.65\"            → Theme: Social (safety)        Result: Same sub-target, target value changed → target_corridor_changed    ```  **Note:** Document in your output when you use semantic proximity matching, as this helps human reviewers understand your logic.  ### Special Rules for Plans  - **STB (annual plans):** `fiscal_year` changes every year by design. Match by KPI identity, not fiscal year. - **LTB (multi-year plans):** Each tranche (e.g., 2022-2025, 2023-2026, 2024-2027) is a separate instance. New tranches appearing in YEAR are expected annual grants, not modifications to existing tranches.  ---  ## Change Types Taxonomy  ### STRUCTURAL CHANGES (always semantic) ``` plan_added              – New plan appeared plan_removed            – Plan closed/removed instrument_added        – New instrument in plan instrument_removed      – Instrument removed kpi_added               – New KPI (including new LTB tranches) kpi_removed             – KPI removed eligibility_changed     – Participant scope changed leaver_rule_changed     – Good/bad leaver rules changed ```  ### TARGET/METRIC CHANGES (always semantic) ``` metric_replacement      – KPI metric replaced entirely (e.g., ROCE → ROIC) sub_target_replacement  – Sub-target within KPI category replaced (e.g., within ESG: fresh water → energy efficiency) target_corridor_changed – Min/target/max values changed (include for human verification of numbers) weight_changed          – KPI weighting changed cap_changed             – Payout cap changed (plan or instrument level) measurement_approach_changed  – How KPI is measured (end-to-begin, average, etc.) calculation_principle_changed – Linear vs discrete interpolation ```  ### DISCRETIONARY/GOVERNANCE (always semantic) ``` sb_adjustment_rule_changed   – Discretionary powers changed multiplier_range_changed     – Multiplier min/max range changed ```  ### ORGANIZATIONAL (context-dependent) ``` division_renamed        – Division name changed – semantic only if organizational restructuring confirmed in documents ```  ### DATA QUALITY FLAGS ``` data_entry_omission     – Value existed in YEAR-1, now null in YEAR without explanation (likely data entry error) data_inconsistency      – Contradictory values within same record or between related fields data_structure_change   – New field appeared / old field disappeared / field usage pattern changed data_error_detected     – Typos, formatting errors, or illogical values in data ```  ### NON-SEMANTIC (exclude from output) ``` fiscal_year_update      – STB fiscal year [YEAR-1]→[YEAR] (expected annual rollover) actual_value_update     – Actual achievement values (target_corridor_actual_value, target_scale_actual_value_in_%) achievement_percent_update  – Achievement percentages tranche_expiry          – Old LTB tranche no longer reported (completed/paid out) ```  ---  ## Semantic vs Non-Semantic: Decision Rules  **ALWAYS SEMANTIC:** - Any change to `target_corridor_min`, `target_corridor_target`, `target_corridor_max` (except actual values) – include for human verification - Any change to `weighting_from_in_%`, `weighting_to_in_%` - Any change to `kpi_name`, `kpi_type`, `kpi_comment` that indicates metric replacement - Any change to caps (`pay_cap`, `total_target_scale_max_in_%`) - Any change to `measurement_approach`, `principle_of_calculation` - New KPIs or removed KPIs - Changes to leaver rules, eligibility, discretionary adjustments  **NEVER SEMANTIC:** - `starting_fiscal_year` / `ending_fiscal_year` change for STB (annual rollover) - `target_corridor_actual_value` (actual results, not policy) - `target_scale_actual_value_in_%` (actual results) - `achievement_in_relation_to_target_max` (calculated field) - Fields in `variable_target_achievement` section (actual results)  **CONTEXT-DEPENDENT:** - Division name changes → Check documents for restructuring evidence - `application_comment` changes → May indicate scope change or just clarification - Null → Value or Value → Null transitions → May be data quality issue or intentional - `kpi_sub_target` field changes → If only this field changed from \"None\" to populated value while underlying KPI structure unchanged, classify as data_structure_change, not semantic  ---  ## Handling Typos and Data Quality Issues  **Typos in data fields:** - **Examples:** \"fEnergy\" instead of \"Energy\", \"2.655\" instead of \"2.65\" - **Action:** Report in BOTH locations:   1. Include in `semantic_changes` if the typo affects a semantic field (like target_corridor)   2. Also include in `data_quality_issues` with type `data_error_detected` - **Rationale:** Human reviewers need to see typos in context of the change they're reviewing, but also need a consolidated list of data errors to fix  **Data entry omissions:** - **Example:** All weightage fields null in YEAR when they had values in YEAR-1 - **Action:** Use change type `data_entry_omission` and verify against documents whether this is intentional restructuring or error - **Verification:** If documents confirm the structure remains unchanged (e.g., \"80% financial, 20% ESG\"), mark as `contradicts_document` or `data_error_detected`  ---  ## LTB Tranche Classification  When reporting `kpi_added` for LTB KPIs, include additional context to help human reviewers:  ```json {   \"change_type\": \"kpi_added\",   \"old_value\": \"N/A (new tranche)\",   \"new_value\": \"New LTB tranche [YEAR]-[YEAR+3] with [metric] targets\",   \"notes\": \"New annual LTB grant. Structure [identical to / differs from] prior tranches: [specify differences if any]\" } ```  **Compare new tranche to previous tranches:** - Same KPI structure? → \"Structure identical to prior tranches\" - Different weights? → \"Weight changed from X% to Y% compared to [YEAR-1]-[YEAR+2] tranche\" - Different targets? → \"Target corridor differs: [specify]\"  This helps reviewers quickly validate that new grants follow expected patterns.  ---  ## Verification Statuses  For each semantic change, assign one of:  | Status | Meaning | |--------|---------| | `verified` | Found confirmation in [YEAR] documents | | `not_found` | Change exists in JSON but no document evidence found | | `contradicts_document` | Document states something different than JSON | | `data_error_detected` | JSON contains obvious error (typo, illogical value) |  ---  ## Output Format  ```json {   \"company\": \"Company Name\",   \"comparison_period\": \"[YEAR-1] → [YEAR]\",      \"semantic_changes\": {     \"plans\": [       {         \"plan_id\": 0000,         \"plan_name\": \"Plan Name\",         \"changes\": [           {             \"field\": \"field_name\",             \"change_type\": \"type_from_taxonomy\",             \"old_value\": \"value in [YEAR-1]\",             \"new_value\": \"value in [YEAR]\",             \"verification_status\": \"verified|not_found|contradicts_document|data_error_detected\",             \"citation\": \"up to 5 words for search\",             \"citation_source\": \"RR|RS\",             \"notes\": \"optional explanation, REQUIRED when using semantic proximity matching\"           }         ]       }     ],     \"instruments\": [],     \"kpi_applications\": [       {         \"plan_id\": 0000,         \"plan_name\": \"Plan Name\",         \"instrument_id\": 0000,         \"instrument_name\": \"Instrument Name\",         \"changes\": [           {             \"kpi_id\": 00000,             \"kpi_name\": \"KPI Name\",             \"tranche\": \"[YEAR]-[YEAR+X]\",             \"application_comment\": \"value if relevant\",             \"change_type\": \"type_from_taxonomy\",             \"old_value\": \"value in [YEAR-1]\",             \"new_value\": \"value in [YEAR]\",             \"verification_status\": \"verified|not_found|contradicts_document|data_error_detected\",             \"citation\": \"up to 5 words for search\",             \"citation_source\": \"RR|RS\",             \"notes\": \"optional explanation\"           }         ]       }     ],     \"eligibility\": [],     \"leaver_rules\": [],     \"sb_adjustments\": []   },      \"excluded_changes_summary\": {     \"count\": 0,     \"categories\": [\"fiscal_year_update\", \"actual_value_update\"],     \"details\": [       \"Brief description of excluded change categories\"     ]   },      \"data_quality_issues\": [     {       \"section\": \"section_name\",       \"record_identifier\": \"how to find this record (e.g., plan_id: 6682, kpi_id: 25788)\",       \"issue_type\": \"data_entry_omission|data_inconsistency|contradicts_document|data_error_detected|data_structure_change\",       \"description\": \"what's wrong\",       \"citation\": \"document evidence if applicable\",       \"citation_source\": \"RR|RS\"     }   ],      \"taxonomy_feedback\": {     \"change_type_missing\": [       {         \"observed_case\": \"description of change that doesn't fit taxonomy\",         \"suggested_type\": \"proposed name for this type\"       }     ],     \"classification_uncertain\": [       {         \"change_description\": \"what changed\",         \"uncertainty\": \"why classification is unclear\"       }     ]   },      \"agent_uncertainties\": [     \"List any aspects where you're unsure about your analysis\"   ],      \"agent_suggestions\": [     \"Suggestions for improving this prompt or process\"   ] } ```  ---  ## Citation Guidelines  **Purpose:** Enable human reviewer to quickly locate the relevant passage in Word/PDF document.  **Format:**  - Up to 5 consecutive words from the document - Choose distinctive phrase (not generic like \"the company\") - Prefer phrases with numbers, specific terms, or unique identifiers  **Examples:** - Good: `\"energy efficiency\"` (for ESG metric change) - Good: `\"20 GWh annually\"` (specific target) - Good: `\"LTIR of 2.65\"` (specific threshold) - Bad: `\"the target achievement\"` (too generic) - Bad: `\"Managing Directors\"` (appears everywhere)  ---  ## Important Notes  1. **Assume [YEAR-1] data is correct.** Focus on verifying [YEAR] changes.  2. **LTB tranches:** New tranches appearing in [YEAR] are expected annual grants. Classify as `kpi_added` and note if structure differs from previous tranches.  3. **Target corridor changes:** Always include `target_corridor_changed` for human review, even for budget-derived annual targets (FCF, SVA). Humans need to verify the numbers are correctly entered.  4. **Data structure changes:** If [YEAR] has fields that [YEAR-1] doesn't (or vice versa), or if field usage patterns changed (e.g., `application_comment` None→populated), flag as `data_structure_change` in data_quality_issues ONLY if this represents improved data capture rather than semantic change.  5. **Be conservative:** When uncertain whether a change is semantic, include it with explanation in notes. Better to include borderline cases than miss real changes.  6. **Mergers/Special events:** If documents mention mergers, acquisitions, or other special events affecting targets (e.g., \"frozen at 100%\"), note this in the relevant change record but classify actual values as non-semantic.  7. **Semantic proximity matching:** When you use semantic matching (especially for ESG sub-targets), document your reasoning in the `notes` field. Example: \"Matched by semantic proximity: YEAR-1 target_corridor contained 'fresh water', YEAR application_comment = 'energy efficiency' → both environmental metrics within same ESG KPI category.\"  8. **Data entry omissions:** When plan-level fields that should exist based on document verification are null, use `data_entry_omission` change type rather than generic `data_inconsistency`. This helps prioritize fixes.  ---  ## Input Files  You will receive: 1. `[COMPANY]_[YEAR-1]_data.json` – baseline data 2. `[COMPANY]_[YEAR]_data.json` – data to compare and verify 3. `[YEAR]_[COMPANY]_RR.docx` – Remuneration Report [YEAR] 4. `[YEAR]_[COMPANY]_RS.docx` – Remuneration System [YEAR] (if available)  Analyze all sections. Provide complete output in the specified JSON format.",
+              "type": "string"
+            },
+            {
+              "id": "id-4",
+              "name": "resultsFolderId",
+              "value": "1oqR7iQuaXkWc3wvdO_yXHFEmEyjrTrRV",
+              "type": "string"
+            },
+            {
+              "id": "id-5",
+              "name": "trackingSheetId",
+              "value": "<__PLACEHOLDER_VALUE__Google Sheets ID for tracking__>",
+              "type": "string"
+            },
+            {
+              "id": "id-6",
+              "name": "alertEmail",
+              "value": "alexander.luzhkov@gmail.com",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "40f12ceb-e6ac-4b4e-8acf-929748000b97",
+      "name": "Workflow Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -448,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "=1Y-rsx7HrGZ86AxSapEDiPq0T3nO2zgh_",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "id": "0cb05402-4cb7-4659-908d-acc90d60c53c",
+      "name": "Load 2023 Data Plans JSON",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Df2FF8QQyCrljkw8",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "=1ISObFsNcda8WTPNGdPcL7ad86ij3d9Do",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "id": "b8520441-bdc1-43d4-9519-1f855520d090",
+      "name": "Load 2024 Data Plans JSON",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        0,
+        192
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Df2FF8QQyCrljkw8",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "=1pIxnQyrij2n0BV2dcc5OuuEly3qvkDtM",
+          "mode": "list"
+        },
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "text/plain"
+            }
+          }
+        }
+      },
+      "id": "8356a7f9-ae69-4ea8-b9df-b2bfe6d0f451",
+      "name": "Load Remuneration Report DOCX",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -224,
+        384
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Df2FF8QQyCrljkw8",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "=1r5nZv6x5rbsPi49OjcTa3gQQFGnZI056",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "950a4d48-fbbd-4d7d-8cb2-68f0078b7985",
+      "name": "Load Remuneration System DOCX",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -224,
+        576
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Df2FF8QQyCrljkw8",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "id": "7b41b6a9-5e78-4d86-8c4e-e8e6418a0909",
+      "name": "Extract RR Content",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "id": "7997ac21-a74c-4685-b4fd-70685d3c08d6",
+      "name": "Extract RS Content",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "id": "00fbb4a7-4e4d-4ebc-a49e-32f6e72dda2b",
+      "name": "Merge All Files",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        480,
+        176
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconsole.log(`Processing ${items.length} items.`);\n\n// Merge All Files соединяет в строгом порядке:\n// index 0: Extract from File (2023 JSON)\n// index 1: Extract from File1 (2024 JSON)  \n// index 2: Extract RR Content\n// index 3: Extract RS Content\n\n// Функция для безопасного извлечения текста\nfunction extractText(item) {\n  if (!item) return null;\n  \n  // Проверяем все возможные варианты\n  if (typeof item.json === 'string') return item.json;\n  if (item.json?.text && typeof item.json.text === 'string') return item.json.text;\n  if (item.json?.data && typeof item.json.data === 'string') return item.json.data;\n  \n  // Если это объект - логируем предупреждение\n  console.log('⚠️ Unexpected structure:', JSON.stringify(item.json).substring(0, 200));\n  return null;\n}\n\n// Функция для безопасного извлечения JSON\nfunction extractJSON(item) {\n  if (!item) return null;\n  return item.json?.data || item.json;\n}\n\nconst data2023 = extractJSON(items[0]);\nconst data2024 = extractJSON(items[1]);\nconst remunerationReport = extractText(items[2]);\nconst remunerationSystem = extractText(items[3]);\n\n// Детальное логирование\nconsole.log('✅ 2023 Data:', data2023 ? 'Found' : 'NOT FOUND');\nconsole.log('✅ 2024 Data:', data2024 ? 'Found' : 'NOT FOUND');\nconsole.log('✅ RR:', remunerationReport ? `Found (${remunerationReport.length} chars)` : 'NOT FOUND');\nconsole.log('✅ RS:', remunerationSystem ? `Found (${remunerationSystem.length} chars)` : 'NOT FOUND');\n\n// Дополнительная проверка - если текст не найден, показываем структуру\nif (!remunerationReport) {\n  console.log('🔍 RR item structure:', JSON.stringify(items[2]).substring(0, 500));\n}\nif (!remunerationSystem) {\n  console.log('🔍 RS item structure:', JSON.stringify(items[3]).substring(0, 500));\n}\n\n// Получаем конфигурацию\nconst config = $('Workflow Configuration').first().json;\n\n// Формируем промпт для Claude\nconst messages = [\n  {\n    \"role\": \"user\",\n    \"content\": [\n      { \n        \"type\": \"text\", \n        \"text\": config.promptTemplate, \n        \"cache_control\": {\"type\": \"ephemeral\"} \n      },\n      { \n        \"type\": \"text\", \n        \"text\": `## Remuneration Report (DOCX):\\n${remunerationReport || \"ERROR: RR NOT FOUND\"}`,\n        \"cache_control\": {\"type\": \"ephemeral\"} \n      },\n      { \n        \"type\": \"text\", \n        \"text\": `## Remuneration System (DOCX):\\n${remunerationSystem || \"ERROR: RS NOT FOUND\"}`,\n        \"cache_control\": {\"type\": \"ephemeral\"} \n      },\n      { \n        \"type\": \"text\", \n        \"text\": `## 2023 Data:\\n${JSON.stringify(data2023, null, 2)}` \n      },\n      { \n        \"type\": \"text\", \n        \"text\": `## 2024 Data:\\n${JSON.stringify(data2024, null, 2)}\\n\\nPlease compare the 2023 and 2024 data.` \n      }\n    ]\n  }\n];\n\nreturn [{ \n  json: { \n    model: \"claude-opus-4-5-20251101\", \n    messages, \n    temperature: 0, \n    max_tokens: 12000 \n  } \n}];"
+      },
+      "id": "fdacfd04-89ea-4288-b6f6-b5cf9c6fb383",
+      "name": "Prepare Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "anthropic-beta",
+              "value": "prompt-caching-2024-07-31"
+            },
+            {}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('Prepare Claude Prompt').item.json) }}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "3ea4a8f6-2d8a-4056-84c6-0d44241b3450",
+      "name": "Claude API Call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        672,
+        288
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "v1CrrHaTQmrtWixN",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Claude API response and extract structured data\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const startTime = Date.now();\n  \n  // Extract the response from Claude API\n  const claudeResponse = item.json.content?.[0]?.text || item.json.text || '';\n  \n  // Extract JSON from markdown code blocks if present\n  let parsedData;\n  const jsonMatch = claudeResponse.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\n  \n  if (jsonMatch) {\n    // JSON found in code block\n    try {\n      parsedData = JSON.parse(jsonMatch[1].trim());\n    } catch (error) {\n      console.log('Error parsing JSON from code block:', error.message);\n      parsedData = { error: 'Failed to parse JSON from code block', rawResponse: claudeResponse };\n    }\n  } else {\n    // Try to parse the entire response as JSON\n    try {\n      parsedData = JSON.parse(claudeResponse);\n    } catch (error) {\n      console.log('Error parsing response as JSON:', error.message);\n      parsedData = { error: 'Failed to parse response', rawResponse: claudeResponse };\n    }\n  }\n  \n  // Calculate metrics\n  const metrics = {\n    totalChanges: 0,\n    uncertaintiesCount: 0,\n    dataQualityIssuesCount: 0,\n    processingTimeMs: Date.now() - startTime\n  };\n  \n  // Count changes if data structure exists\n  if (parsedData.changes && Array.isArray(parsedData.changes)) {\n    metrics.totalChanges = parsedData.changes.length;\n  }\n  \n  // Count uncertainties\n  if (parsedData.uncertainties && Array.isArray(parsedData.uncertainties)) {\n    metrics.uncertaintiesCount = parsedData.uncertainties.length;\n  }\n  \n  // Count data quality issues\n  if (parsedData.dataQualityIssues && Array.isArray(parsedData.dataQualityIssues)) {\n    metrics.dataQualityIssuesCount = parsedData.dataQualityIssues.length;\n  }\n  \n  // Combine parsed data with metrics\n  results.push({\n    json: {\n      ...parsedData,\n      metrics: metrics,\n      processedAt: new Date().toISOString()\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "fec8761d-ba05-4f1f-9902-33b8753ca8f0",
+      "name": "Parse Claude Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "5d600a49-fdd3-4356-8f3e-60f8e42dc279",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        208
+      ],
+      "id": "2e7deeaf-24ef-4393-9d10-baf3feb4de0d",
+      "name": "Extract from File1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Workflow Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Workflow Configuration": {
+      "main": [
+        [
+          {
+            "node": "Load 2023 Data Plans JSON",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Load 2024 Data Plans JSON",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Load Remuneration Report DOCX",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Load Remuneration System DOCX",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Remuneration Report DOCX": {
+      "main": [
+        [
+          {
+            "node": "Extract RR Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Remuneration System DOCX": {
+      "main": [
+        [
+          {
+            "node": "Extract RS Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load 2023 Data Plans JSON": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load 2024 Data Plans JSON": {
+      "main": [
+        [
+          {
+            "node": "Extract from File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract RR Content": {
+      "main": [
+        [
+          {
+            "node": "Merge All Files",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Extract RS Content": {
+      "main": [
+        [
+          {
+            "node": "Merge All Files",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Merge All Files": {
+      "main": [
+        [
+          {
+            "node": "Prepare Claude Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Claude Prompt": {
+      "main": [
+        [
+          {
+            "node": "Claude API Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude API Call": {
+      "main": [
+        [
+          {
+            "node": "Parse Claude Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Claude Response": {
+      "main": [
+        []
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Merge All Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File1": {
+      "main": [
+        [
+          {
+            "node": "Merge All Files",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "330ef7c6-34b2-4268-b565-0714cab22fb0",
+  "meta": {
+    "instanceId": "ac6468f5c28a3d68ec0441bcd2a5615eecd3e585d9be0a85a683b9eaa639c2d5"
+  },
+  "id": "ewuyZez7d28qaQyl",
+  "tags": []
+}
